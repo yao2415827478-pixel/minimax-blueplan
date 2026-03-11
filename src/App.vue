@@ -37,39 +37,35 @@ onMounted(() => {
 }
 
 html, body {
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
   background: #000000;
   color: #F8FAFC;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-  overflow-x: hidden;
+  overflow-x: visible;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   touch-action: manipulation;
+  -webkit-overflow-scrolling: touch;
 }
 
 #app {
+  width: 100%;
   min-height: 100vh;
   min-height: 100dvh;
   background: #000000;
 }
 
-/* 应用容器 - 适配安卓手机尺寸 360×800 */
+/* 应用容器 - 自适应手机屏幕 */
 .app-container {
-  width: 360px;
-  min-height: 800px;
-  height: 100vh;
-  height: 100dvh;
+  width: 100%;
+  max-width: 430px;
+  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0 auto;
   position: relative;
-  overflow-x: hidden;
   background: #000000;
-}
-
-/* 在更大屏幕上模拟手机显示 */
-@media (min-width: 360px) {
-  .app-container {
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
-  }
 }
 
 /* 液态玻璃卡片 */
