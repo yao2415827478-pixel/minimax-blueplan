@@ -13,8 +13,8 @@
         <div class="logo-container">
           <span class="logo-icon">🧠</span>
         </div>
-        <span class="app-name gradient-text">布鲁计划</span>
-        <span class="app-tagline">科学戒色，重塑人生</span>
+        <h1 class="app-name gradient-text">布鲁计划</h1>
+        <p class="app-tagline">科学戒色，重塑人生</p>
       </div>
 
       <!-- 功能介绍 -->
@@ -22,32 +22,32 @@
         <div class="feature-item glass-card">
           <span class="feature-icon">📊</span>
           <div class="feature-text">
-            <span class="feature-title">智能评估</span>
-            <span class="feature-desc">AI驱动的个性化依赖程度分析</span>
+            <h3 class="feature-title">智能评估</h3>
+            <p class="feature-desc">AI驱动的个性化依赖程度分析</p>
           </div>
         </div>
 
         <div class="feature-item glass-card">
           <span class="feature-icon">📅</span>
           <div class="feature-text">
-            <span class="feature-title">90天计划</span>
-            <span class="feature-desc">基于神经科学的科学恢复方案</span>
+            <h3 class="feature-title">90天计划</h3>
+            <p class="feature-desc">基于神经科学的科学恢复方案</p>
           </div>
         </div>
 
         <div class="feature-item glass-card">
           <span class="feature-icon">🆘</span>
           <div class="feature-text">
-            <span class="feature-title">紧急求助</span>
-            <span class="feature-desc">一键触发即时干预机制</span>
+            <h3 class="feature-title">紧急求助</h3>
+            <p class="feature-desc">一键触发即时干预机制</p>
           </div>
         </div>
 
         <div class="feature-item glass-card">
           <span class="feature-icon">📈</span>
           <div class="feature-text">
-            <span class="feature-title">进度追踪</span>
-            <span class="feature-desc">实时记录戒色天数与里程碑</span>
+            <h3 class="feature-title">进度追踪</h3>
+            <p class="feature-desc">实时记录戒色天数与里程碑</p>
           </div>
         </div>
       </div>
@@ -57,7 +57,7 @@
         <button class="start-button glass-button" @click="startAssessment">
           开始评估
         </button>
-        <span class="notice">完成评估后即可登录</span>
+        <p class="notice">完成评估后即可登录</p>
       </div>
     </div>
   </div>

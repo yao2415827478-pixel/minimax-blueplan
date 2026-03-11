@@ -310,24 +310,30 @@ const goToProductIntro = () => {
   min-height: 100dvh;
   position: relative;
   overflow: hidden;
+  /* 关键：添加 flex 布局确保子元素居中生效 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 /* 内容容器 - 限制宽度为设计稿尺寸 360px，居中显示 */
 .survey-content {
   width: 100%;
   max-width: 360px;
-  margin: 0 auto;
   min-height: 100vh;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
   position: relative;
   z-index: 1;
-  padding: 0 20px;
+  padding: 0 16px;
   box-sizing: border-box;
 }
 
+/* 顶部进度条 - 限制最大宽度 */
 .progress-header {
+  width: 100%;
+  max-width: 360px;
   padding: 80px 0 20px;
 }
 
@@ -351,17 +357,23 @@ const goToProductIntro = () => {
   color: #94A3B8;
 }
 
+/* 问题容器 */
 .question-container {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px 0;
+  width: 100%;
+  max-width: 360px;
 }
 
+/* 问题卡片 - 限制宽度 */
 .question-card {
   width: 100%;
+  max-width: 360px;
   padding: 24px;
+  box-sizing: border-box;
 }
 
 .question-number {
@@ -380,10 +392,12 @@ const goToProductIntro = () => {
   margin-bottom: 20px;
 }
 
+/* 选项列表 */
 .options-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  width: 100%;
 }
 
 .option-item {
@@ -432,10 +446,14 @@ const goToProductIntro = () => {
   line-height: 1.4;
 }
 
+/* 底部按钮栏 - 限制宽度 */
 .action-bar {
+  width: 100%;
+  max-width: 360px;
   padding: 20px 0 calc(32px + env(safe-area-inset-bottom));
   display: flex;
   gap: 12px;
+  box-sizing: border-box;
 }
 
 .nav-button {
@@ -463,6 +481,7 @@ const goToProductIntro = () => {
   cursor: not-allowed;
 }
 
+/* 结果弹窗 */
 .result-overlay {
   position: fixed;
   top: 0;
@@ -479,9 +498,11 @@ const goToProductIntro = () => {
 
 .result-modal {
   width: 100%;
+  max-width: 360px;
   max-height: 90vh;
   overflow-y: auto;
   padding: 28px;
+  box-sizing: border-box;
 }
 
 .result-title {
