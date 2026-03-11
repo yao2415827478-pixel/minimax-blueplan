@@ -928,7 +928,7 @@ watch(showJournal, (newVal) => {
   min-height: 100dvh;
   position: relative;
   overflow-x: hidden;
-  padding-bottom: 160px;
+  padding-bottom: calc(140px + env(safe-area-inset-bottom));
 }
 
 .status-bar {
@@ -1370,10 +1370,13 @@ watch(showJournal, (newVal) => {
 .bottom-section {
   position: fixed;
   bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 16px 24px 28px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.95), rgba(0, 0, 0, 0.8));
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  padding: 16px 24px calc(28px + env(safe-area-inset-bottom));
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 70%, rgba(0, 0, 0, 0.8));
+  z-index: 50;
 }
 
 .panic-section {

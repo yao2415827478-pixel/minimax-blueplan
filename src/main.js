@@ -1,7 +1,6 @@
 import { createApp } from 'vue'
-import { createRouter, createWebHistory } from 'vue-router'
 import App from './App.vue'
-import router from './router'
+import router from './router.js'
 import './style.css'
 import './services/payment.js'
 

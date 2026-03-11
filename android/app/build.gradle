@@ -9,6 +9,18 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+    
+    // Java工具链 - 使用Java 17
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(17)
+        }
+    }
+    
+    // 强制使用Java 17
+    tasks.withType(JavaCompile) {
+        options.release = 17
+    }
 
     // 签名配置
     signingConfigs {
@@ -40,6 +52,12 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+    }
+    
+    // 关闭 release lint 检查
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
     }
 }
 

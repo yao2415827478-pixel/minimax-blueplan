@@ -284,10 +284,13 @@ const goToPayment = () => {
 .bottom-action {
   position: fixed;
   bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 20px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  padding: 20px 24px calc(20px + env(safe-area-inset-bottom));
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 60%, transparent);
+  z-index: 50;
 }
 
 .action-hint {

@@ -1,10 +1,15 @@
 <template>
   <div class="app-container">
-    <router-view v-slot="{ Component }">
-      <transition name="fade" mode="out-in">
-        <component :is="Component" />
-      </transition>
-    </router-view>
+    <!-- 背景层 -->
+    <div class="app-bg"></div>
+    <!-- 内容层 -->
+    <div class="app-content">
+      <router-view v-slot="{ Component }">
+        <transition name="fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
+    </div>
   </div>
 </template>
 
@@ -52,20 +57,44 @@ html, body {
   background: #000000;
 }
 
-/* 应用容器 - 适配安卓手机尺寸 360×800 */
+/* 应用容器 - 适配各种屏幕尺寸 */
 .app-container {
-  width: 360px;
-  min-height: 800px;
-  height: 100vh;
-  height: 100dvh;
+  width: 100%;
+  max-width: 430px;  /* iPhone Pro Max 宽度 */
+  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0 auto;
   position: relative;
   overflow-x: hidden;
   background: #000000;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 背景层 */
+.app-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #000000;
+  z-index: 0;
+}
+
+/* 内容层 */
+.app-content {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* 在更大屏幕上模拟手机显示 */
-@media (min-width: 360px) {
+@media (min-width: 430px) {
   .app-container {
     border-left: 1px solid rgba(255, 255, 255, 0.1);
     border-right: 1px solid rgba(255, 255, 255, 0.1);
@@ -281,5 +310,25 @@ button {
 
 button:active {
   transform: scale(0.98);
+}
+
+/* uni-app 标签兼容 - 让 <view> <text> 表现正常 */
+view {
+  display: block;
+}
+
+text {
+  display: inline;
+}
+
+/* rpx 单位兼容 - 1rpx = 0.5px (以 750rpx = 375px 为基准) */
+html {
+  /* 设置根字体大小用于 rpx 计算 */
+  font-size: 2px;
+}
+
+/* 或者使用 CSS 变量方式 */
+:root {
+  --rpx: 0.5px;
 }
 </style>

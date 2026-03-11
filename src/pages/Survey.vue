@@ -5,54 +5,57 @@
     <div class="liquid-orb liquid-orb-1"></div>
     <div class="liquid-orb liquid-orb-2"></div>
 
-    <!-- 顶部进度 -->
-    <div class="progress-header">
-      <div class="progress-bar">
-        <div class="progress-fill" :style="{ width: progressWidth + '%' }"></div>
+    <!-- 问卷内容容器 - 限制宽度为设计稿尺寸 -->
+    <div class="survey-content">
+      <!-- 顶部进度 -->
+      <div class="progress-header">
+        <div class="progress-bar">
+          <div class="progress-fill" :style="{ width: progressWidth + '%' }"></div>
+        </div>
+        <span class="progress-text">{{ currentIndex + 1 }} / {{ questions.length }}</span>
       </div>
-      <span class="progress-text">{{ currentIndex + 1 }} / {{ questions.length }}</span>
-    </div>
 
-    <!-- 问卷内容 -->
-    <div class="question-container">
-      <div class="question-card glass-card">
-        <span class="question-number">问题 {{ currentIndex + 1 }}</span>
-        <h2 class="question-text">{{ currentQuestion.text }}</h2>
+      <!-- 问卷内容 -->
+      <div class="question-container">
+        <div class="question-card glass-card">
+          <span class="question-number">问题 {{ currentIndex + 1 }}</span>
+          <h2 class="question-text">{{ currentQuestion.text }}</h2>
 
-        <!-- 选项列表 -->
-        <div class="options-list">
-          <div
-            v-for="(option, idx) in currentQuestion.options"
-            :key="idx"
-            class="option-item"
-            :class="{ selected: answers[currentIndex] === option.score }"
-            @click="selectOption(option.score)"
-          >
-            <div class="option-indicator">
-              <div v-if="answers[currentIndex] === option.score" class="option-checked"></div>
+          <!-- 选项列表 -->
+          <div class="options-list">
+            <div
+              v-for="(option, idx) in currentQuestion.options"
+              :key="idx"
+              class="option-item"
+              :class="{ selected: answers[currentIndex] === option.score }"
+              @click="selectOption(option.score)"
+            >
+              <div class="option-indicator">
+                <div v-if="answers[currentIndex] === option.score" class="option-checked"></div>
+              </div>
+              <span class="option-text">{{ option.text }}</span>
             </div>
-            <span class="option-text">{{ option.text }}</span>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 底部按钮 -->
-    <div class="action-bar">
-      <button
-        v-if="currentIndex > 0"
-        class="nav-button prev-button"
-        @click="prevQuestion"
-      >
-        上一题
-      </button>
-      <button
-        class="nav-button next-button glass-button"
-        :disabled="answers[currentIndex] === null"
-        @click="nextQuestion"
-      >
-        {{ currentIndex === questions.length - 1 ? '查看结果' : '下一题' }}
-      </button>
+      <!-- 底部按钮 -->
+      <div class="action-bar">
+        <button
+          v-if="currentIndex > 0"
+          class="nav-button prev-button"
+          @click="prevQuestion"
+        >
+          上一题
+        </button>
+        <button
+          class="nav-button next-button glass-button"
+          :disabled="answers[currentIndex] === null"
+          @click="nextQuestion"
+        >
+          {{ currentIndex === questions.length - 1 ? '查看结果' : '下一题' }}
+        </button>
+      </div>
     </div>
 
     <!-- 结果弹窗 -->
@@ -307,14 +310,25 @@ const goToProductIntro = () => {
   min-height: 100dvh;
   position: relative;
   overflow: hidden;
+}
+
+/* 内容容器 - 限制宽度为设计稿尺寸 360px，居中显示 */
+.survey-content {
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 1;
+  padding: 0 20px;
+  box-sizing: border-box;
 }
 
 .progress-header {
-  position: relative;
-  z-index: 10;
-  padding: 80px 24px 20px;
+  padding: 80px 0 20px;
 }
 
 .progress-bar {
@@ -339,15 +353,15 @@ const goToProductIntro = () => {
 
 .question-container {
   flex: 1;
-  padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 20px 0;
 }
 
 .question-card {
   width: 100%;
-  padding: 28px;
+  padding: 24px;
 }
 
 .question-number {
@@ -359,23 +373,23 @@ const goToProductIntro = () => {
 }
 
 .question-text {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
   color: #F8FAFC;
   line-height: 1.5;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .options-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .option-item {
   display: flex;
   align-items: center;
-  padding: 16px 14px;
+  padding: 14px 12px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
@@ -393,35 +407,35 @@ const goToProductIntro = () => {
 }
 
 .option-indicator {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
-  margin-right: 12px;
+  margin-right: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .option-checked {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   background: #3B82F6;
   border-radius: 50%;
 }
 
 .option-text {
-  font-size: 15px;
+  font-size: 14px;
   color: #F8FAFC;
   flex: 1;
+  line-height: 1.4;
 }
 
 .action-bar {
-  position: relative;
-  z-index: 10;
-  padding: 20px 24px 32px;
+  padding: 20px 0 calc(32px + env(safe-area-inset-bottom));
   display: flex;
-  gap: 16px;
+  gap: 12px;
 }
 
 .nav-button {

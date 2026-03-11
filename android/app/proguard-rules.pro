@@ -19,3 +19,19 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Capacitor WebView Bridge
+-keep class com.getcapacitor.** { *; }
+-keep class com.getcapacitor.Bridge { *; }
+-keep class com.getcapacitor.Plugin { *; }
+-keep class * extends com.getcapacitor.Plugin { *; }
+
+# WebView
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
+# Alipay SDK
+-keep class com.alipay.** { *; }
+-keep class com.alipay.android.** { *; }
+-dontwarn com.alipay.**
