@@ -5,6 +5,17 @@
     <view class="liquid-orb liquid-orb-1"></view>
     <view class="liquid-orb liquid-orb-2"></view>
 
+    <!-- Toast 提示 -->
+    <view v-if="toastVisible" class="toast" :class="toastType">
+      {{ toastMessage }}
+    </view>
+
+    <!-- Loading 遮罩 -->
+    <view v-if="loadingVisible" class="loading-overlay">
+      <view class="loading-spinner"></view>
+      <text class="loading-text">登录中...</text>
+    </view>
+
     <!-- 主要内容 -->
     <view class="content">
       <!-- 标题 -->
@@ -106,6 +117,9 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 // 状态变量
 const phoneNumber = ref('')
@@ -114,8 +128,36 @@ const countdown = ref(0)
 const showCodeModal = ref(false)
 const codeModal = ref('')
 
+// Toast 状态
+const toastVisible = ref(false)
+const toastMessage = ref('')
+const toastType = ref('error') // error, success
+
+// Loading 状态
+const loadingVisible = ref(false)
+
+// 显示 Toast
+const showToast = (message, type = 'error') => {
+  toastMessage.value = message
+  toastType.value = type
+  toastVisible.value = true
+  setTimeout(() => {
+    toastVisible.value = false
+  }, 2000)
+}
+
+// 显示 Loading
+const showLoading = (message = '加载中...') => {
+  loadingVisible.value = true
+}
+
+// 隐藏 Loading
+const hideLoading = () => {
+  loadingVisible.value = false
+}
+
 // 获取评估结果
-const surveyResult = uni.getStorageSync('surveyResult') || {}
+const surveyResult = JSON.parse(localStorage.getItem('surveyResult') || '{}')
 const surveyScore = ref(surveyResult.score || 0)
 
 // 计算评分等级
@@ -131,10 +173,7 @@ const scoreLevel = computed(() => {
 // 发送验证码
 const sendCode = () => {
   if (!phoneNumber.value || phoneNumber.value.length !== 11) {
-    uni.showToast({
-      title: '请输入正确的手机号',
-      icon: 'none'
-    })
+    showToast('请输入正确的手机号')
     return
   }
 
@@ -147,10 +186,7 @@ const sendCode = () => {
     }
   }, 1000)
 
-  uni.showToast({
-    title: '验证码已发送',
-    icon: 'success'
-  })
+  showToast('验证码已发送', 'success')
 
   // 显示验证码输入弹窗（模拟）
   setTimeout(() => {
@@ -170,48 +206,35 @@ const confirmCode = () => {
 // 处理登录
 const handleLogin = () => {
   if (!phoneNumber.value || phoneNumber.value.length !== 11) {
-    uni.showToast({
-      title: '请输入正确的手机号',
-      icon: 'none'
-    })
+    showToast('请输入正确的手机号')
     return
   }
 
   if (!code.value || code.value.length < 4) {
-    uni.showToast({
-      title: '请输入验证码',
-      icon: 'none'
-    })
+    showToast('请输入验证码')
     return
   }
 
   // 模拟登录
-  uni.showLoading({
-    title: '登录中...'
-  })
+  showLoading('登录中...')
 
   setTimeout(() => {
-    uni.hideLoading()
+    hideLoading()
 
     // 保存登录状态
-    uni.setStorageSync('isLoggedIn', true)
-    uni.setStorageSync('phoneNumber', phoneNumber.value)
-    uni.setStorageSync('loginTime', Date.now())
+    localStorage.setItem('isLoggedIn', 'true')
+    localStorage.setItem('phoneNumber', phoneNumber.value)
+    localStorage.setItem('loginTime', Date.now().toString())
 
     // 如果没有开始日期，设置开始日期
-    if (!uni.getStorageSync('startDate')) {
-      uni.setStorageSync('startDate', Date.now())
+    if (!localStorage.getItem('startDate')) {
+      localStorage.setItem('startDate', Date.now().toString())
     }
 
-    uni.showToast({
-      title: '登录成功',
-      icon: 'success'
-    })
+    showToast('登录成功', 'success')
 
     setTimeout(() => {
-      uni.reLaunch({
-        url: '/pages/home/home'
-      })
+      router.push('/home')
     }, 500)
   }, 1000)
 }
@@ -422,5 +445,75 @@ const handleLogin = () => {
   width: 100%;
   height: 96rpx;
   font-size: 32rpx;
+}
+
+/* Toast 样式 */
+.toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 24rpx 48rpx;
+  border-radius: 16rpx;
+  font-size: 28rpx;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+
+  &.error {
+    background: rgba(239, 68, 68, 0.9);
+    color: #FFFFFF;
+  }
+
+  &.success {
+    background: rgba(34, 197, 94, 0.9);
+    color: #FFFFFF;
+  }
+}
+
+/* Loading 样式 */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.loading-spinner {
+  width: 80rpx;
+  height: 80rpx;
+  border: 6rpx solid rgba(255, 255, 255, 0.1);
+  border-top-color: #3B82F6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.loading-text {
+  margin-top: 24rpx;
+  color: #FFFFFF;
+  font-size: 28rpx;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
 }
 </style>
