@@ -1,84 +1,84 @@
 <template>
-  <view class="plan-page">
+  <div class="plan-page">
     <!-- 动态背景 -->
-    <view class="liquid-bg"></view>
-    <view class="liquid-orb liquid-orb-1"></view>
-    <view class="liquid-orb liquid-orb-2"></view>
+    <div class="liquid-bg"></div>
+    <div class="liquid-orb liquid-orb-1"></div>
+    <div class="liquid-orb liquid-orb-2"></div>
 
     <!-- 顶部导航 -->
-    <view class="nav-header">
-      <view class="back-button" @click="goBack">
-        <text>←</text>
-      </view>
-      <text class="nav-title">90天恢复计划</text>
-      <view class="placeholder"></view>
-    </view>
+    <div class="nav-header">
+      <div class="back-button" @click="goBack">
+        <span>←</span>
+      </div>
+      <h1 class="nav-title">90天恢复计划</h1>
+      <div class="placeholder"></div>
+    </div>
 
     <!-- 进度指示 -->
-    <view class="progress-indicator">
-      <view class="progress-bar">
-        <view class="progress-fill" :style="{ width: progressWidth }"></view>
-      </view>
-      <text class="progress-text">第 {{ currentDay }} / 90 天</text>
-    </view>
+    <div class="progress-indicator">
+      <div class="progress-bar">
+        <div class="progress-fill" :style="{ width: progressWidth }"></div>
+      </div>
+      <span class="progress-text">第 {{ currentDay }} / 90 天</span>
+    </div>
 
     <!-- 任务列表 -->
-    <scroll-view class="task-list" scroll-y>
-      <view
+    <div class="task-list">
+      <div
         v-for="task in allTasks"
         :key="task.day"
         class="task-item glass-card"
         :class="{ locked: task.day > currentDay, completed: isCompleted(task.day) }"
         @click="selectTask(task)"
       >
-        <view class="task-day-badge">
-          <text>Day {{ task.day }}</text>
-        </view>
-        <view class="task-info">
-          <text class="task-theme">{{ task.theme }}</text>
-          <text class="task-preview">{{ task.task.substring(0, 50) }}...</text>
-        </view>
-        <view class="task-status">
-          <text v-if="isCompleted(task.day)" class="status-completed">✓</text>
-          <text v-else-if="task.day > currentDay" class="status-locked">🔒</text>
-          <text v-else class="status-current">进行中</text>
-        </view>
-      </view>
-    </scroll-view>
+        <div class="task-day-badge">
+          <span>Day {{ task.day }}</span>
+        </div>
+        <div class="task-info">
+          <span class="task-theme">{{ task.theme }}</span>
+          <span class="task-preview">{{ task.task.substring(0, 50) }}...</span>
+        </div>
+        <div class="task-status">
+          <span v-if="isCompleted(task.day)" class="status-completed">✓</span>
+          <span v-else-if="task.day > currentDay" class="status-locked">🔒</span>
+          <span v-else class="status-current">进行中</span>
+        </div>
+      </div>
+    </div>
 
     <!-- 任务详情弹窗 -->
-    <view v-if="selectedTask" class="modal-overlay" @click="closeModal">
-      <view class="task-modal glass-card" @click.stop>
-        <view class="modal-header">
-          <view class="modal-day-badge">
-            <text>第 {{ selectedTask.day }} 天</text>
-          </view>
-          <text class="modal-theme">{{ selectedTask.theme }}</text>
-        </view>
+    <div v-if="selectedTask" class="modal-overlay" @click="closeModal">
+      <div class="task-modal glass-card" @click.stop>
+        <div class="modal-header">
+          <div class="modal-day-badge">
+            <span>第 {{ selectedTask.day }} 天</span>
+          </div>
+          <h2 class="modal-theme">{{ selectedTask.theme }}</h2>
+        </div>
 
-        <view class="modal-content">
-          <text class="content-text">{{ selectedTask.task }}</text>
+        <div class="modal-content">
+          <p class="content-text">{{ selectedTask.task }}</p>
 
           <!-- 神经科学知识 -->
-          <view class="knowledge-section">
-            <text class="section-label">🧠 神经科学知识</text>
-            <text class="knowledge-text">{{ selectedTask.knowledge }}</text>
-          </view>
+          <div class="knowledge-section">
+            <span class="section-label">🧠 神经科学知识</span>
+            <p class="knowledge-text">{{ selectedTask.knowledge }}</p>
+          </div>
 
           <!-- 行动任务 -->
-          <view class="action-section">
-            <text class="section-label">🎯 今日行动</text>
-            <text class="action-text">{{ selectedTask.action }}</text>
-          </view>
+          <div class="action-section">
+            <span class="section-label">🎯 今日行动</span>
+            <p class="action-text">{{ selectedTask.action }}</p>
+          </div>
 
           <!-- 反思提示 -->
-          <view class="reflection-section">
-            <text class="section-label">💭 自我反思</text>
-            <text class="reflection-text">{{ selectedTask.reflection }}</text>
-          </view>
-        </view>
+          <div class="reflection-section">
+            <span class="section-label">💭 自我反思</span>
+            <p class="reflection-text">{{ selectedTask.reflection }}</p>
+          </div>
+        </div>
 
-        <view class="modal-actions">
+        <div class="modal-actions">
           <button
             class="complete-button glass-button"
             :class="{ completed: isCompleted(selectedTask.day) }"
@@ -89,27 +89,41 @@
           <button class="close-modal-button" @click="closeModal">
             关闭
           </button>
-        </view>
-      </view>
-    </view>
-  </view>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+
+// 导入统一数据系统
+import {
+  getTodayKey,
+  getDayIndexFromStart,
+  formatDateKey
+} from '../../utils/dateUtils'
+import {
+  getUserTimeState,
+  getPlanProgressByDate,
+  savePlanProgressByDate,
+  getAllCalendarStatus,
+  checkInDate
+} from '../../utils/storage'
 
 // 状态变量
+const router = useRouter()
 const selectedTask = ref(null)
 
-// 获取当前天数
+// 使用统一数据系统获取当前天数
 const getCurrentDay = () => {
-  const startDate = uni.getStorageSync('startDate')
-  if (!startDate) return 1
+  const userState = getUserTimeState()
+  if (!userState.appStartDate) return 1
 
-  const now = Date.now()
-  const diff = now - startDate
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  return Math.min(days + 1, 90)
+  const todayKey = getTodayKey()
+  return getDayIndexFromStart(userState.appStartDate, todayKey)
 }
 
 const currentDay = ref(getCurrentDay())
@@ -119,10 +133,21 @@ const progressWidth = computed(() => {
   return `${(currentDay.value / 90) * 100}%`
 })
 
-// 检查任务是否完成
+// 使用统一存储系统检查任务是否完成
 const isCompleted = (day) => {
-  const completedDays = uni.getStorageSync('completedDays') || []
-  return completedDays.includes(day)
+  const userState = getUserTimeState()
+  if (!userState.appStartDate) return false
+
+  const todayKey = getTodayKey()
+  const allStatus = getAllCalendarStatus()
+
+  // 查找该天对应的日期键
+  const startDate = userState.appStartDate
+  const dayDate = new Date(startDate)
+  dayDate.setDate(dayDate.getDate() + (day - 1))
+  const dateKey = formatDateKey(dayDate)
+
+  return allStatus[dateKey]?.checked || false
 }
 
 // 90天任务数据
@@ -139,7 +164,7 @@ const allTasks = ref([
     day: 2,
     theme: '认识诱因',
     task: '了解自己的诱因是成功的关键。哪些时间、场景或情绪最容易触发你的冲动？提前识别它们。',
-    knowledge: '大脑会形成\"触发-反应\"的神经通路。通过识别诱因，你可以提前准备替代方案。',
+    knowledge: '大脑会形成"触发-反应"的神经通路。通过识别诱因，你可以提前准备替代方案。',
     action: '列出最近让你产生冲动的3个场景。为每个场景想一个替代行为。',
     reflection: '你发现自己最大的诱因是什么？你打算如何应对？'
   },
@@ -188,7 +213,7 @@ const allTasks = ref([
     theme: '应对无聊',
     task: '无聊时最容易产生冲动。学会用有意义的方式填充时间。',
     knowledge: '无聊是大脑寻找刺激的信号。提前准备一些活动可以避免冲动。',
-    action: '创建一个\"当我无聊时\"的活动清单。今天开始尝试。',
+    action: '创建一个"当我无聊时"的活动清单。今天开始尝试。',
     reflection: '什么时候你最容易感到无聊？你会怎么做？'
   },
   {
@@ -207,7 +232,6 @@ const allTasks = ref([
     action: '分析今天破戒的原因。制定避免再次发生的具体计划。',
     reflection: '如果发生了，你会怎么对待自己？'
   },
-  // 继续更多任务...
   {
     day: 11,
     theme: '正念练习',
@@ -253,7 +277,7 @@ const allTasks = ref([
     theme: '数字排毒',
     task: '减少使用手机和电脑的时间，特别是晚上。',
     knowledge: '屏幕发出的蓝光会影响睡眠质量。',
-    action: '设定每天的\"屏幕时间\"限制。',
+    action: '设定每天的"屏幕时间"限制。',
     reflection: '你每天花多少时间在屏幕上？'
   },
   {
@@ -302,18 +326,25 @@ const closeModal = () => {
   selectedTask.value = null
 }
 
-// 完成今日任务
+// 使用统一存储系统完成今日任务
 const completeTask = (day) => {
-  const completedDays = uni.getStorageSync('completedDays') || []
+  const userState = getUserTimeState()
+  if (!userState.appStartDate) {
+    alert('请先开始你的旅程')
+    return
+  }
 
-  if (!completedDays.includes(day)) {
-    completedDays.push(day)
-    uni.setStorageSync('completedDays', completedDays)
+  // 计算该天对应的日期键
+  const startDate = userState.appStartDate
+  const dayDate = new Date(startDate)
+  dayDate.setDate(dayDate.getDate() + (day - 1))
+  const dateKey = formatDateKey(dayDate)
 
-    uni.showToast({
-      title: '任务完成！',
-      icon: 'success'
-    })
+  // 使用统一存储系统标记完成
+  const success = checkInDate(dateKey)
+
+  if (success) {
+    alert('任务完成！')
 
     setTimeout(() => {
       closeModal()
@@ -323,85 +354,133 @@ const completeTask = (day) => {
 
 // 返回
 const goBack = () => {
-  uni.navigateBack()
+  router.back()
 }
 </script>
 
 <style lang="scss" scoped>
 .plan-page {
   min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
+  padding-bottom: 100px;
+}
+
+.liquid-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(ellipse at 20% 20%, #1e1b4b 0%, #000000 50%),
+              radial-gradient(ellipse at 80% 80%, #172554 0%, #000000 50%),
+              radial-gradient(ellipse at 50% 50%, #0f172a 0%, #000000 100%);
+  z-index: -1;
+}
+
+.liquid-orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.4;
+  animation: float 20s ease-in-out infinite;
+  z-index: -1;
+}
+
+.liquid-orb-1 {
+  width: 200px;
+  height: 200px;
+  background: linear-gradient(135deg, #3B82F6, #6366F1);
+  top: 10%;
+  left: 10%;
+}
+
+.liquid-orb-2 {
+  width: 250px;
+  height: 250px;
+  background: linear-gradient(135deg, #8B5CF6, #EC4899);
+  top: 60%;
+  right: 10%;
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(30px, -30px) scale(1.05); }
+  50% { transform: translate(-20px, 20px) scale(0.95); }
+  75% { transform: translate(-30px, -20px) scale(1.02); }
 }
 
 .nav-header {
   position: relative;
   z-index: 10;
-  padding: 140rpx 48rpx 32rpx;
+  padding: 70px 24px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
 .back-button {
-  width: 80rpx;
-  height: 80rpx;
+  width: 40px;
+  height: 40px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 36rpx;
+  font-size: 18px;
   color: #F8FAFC;
+  cursor: pointer;
 }
 
 .nav-title {
-  font-size: 36rpx;
+  font-size: 18px;
   font-weight: 600;
   color: #F8FAFC;
+  margin: 0;
 }
 
 .placeholder {
-  width: 80rpx;
+  width: 40px;
 }
 
 .progress-indicator {
-  padding: 0 48rpx;
-  margin-bottom: 32rpx;
+  padding: 0 24px;
+  margin-bottom: 16px;
 }
 
 .progress-bar {
-  height: 8rpx;
+  height: 4px;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 4rpx;
+  border-radius: 2px;
   overflow: hidden;
-  margin-bottom: 12rpx;
+  margin-bottom: 6px;
 }
 
 .progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #3B82F6, #8B5CF6);
-  border-radius: 4rpx;
+  border-radius: 2px;
   transition: width 0.3s ease;
 }
 
 .progress-text {
-  font-size: 24rpx;
+  font-size: 12px;
   color: #94A3B8;
 }
 
 .task-list {
-  padding: 0 48rpx;
-  padding-bottom: 48rpx;
-  height: calc(100vh - 300rpx);
+  padding: 0 24px;
+  padding-bottom: 24px;
 }
 
 .task-item {
   display: flex;
   align-items: center;
-  padding: 28rpx;
-  margin-bottom: 20rpx;
+  padding: 14px;
+  margin-bottom: 10px;
   opacity: 1;
   transition: all 0.3s ease;
+  cursor: pointer;
 
   &.locked {
     opacity: 0.4;
@@ -419,13 +498,13 @@ const goBack = () => {
 
 .task-day-badge {
   background: linear-gradient(135deg, #3B82F6, #6366F1);
-  padding: 12rpx 16rpx;
-  border-radius: 12rpx;
-  margin-right: 20rpx;
+  padding: 6px 8px;
+  border-radius: 6px;
+  margin-right: 10px;
   flex-shrink: 0;
 
-  text {
-    font-size: 22rpx;
+  span {
+    font-size: 11px;
     font-weight: 600;
     color: #F8FAFC;
   }
@@ -438,32 +517,32 @@ const goBack = () => {
 }
 
 .task-theme {
-  font-size: 28rpx;
+  font-size: 14px;
   font-weight: 600;
   color: #F8FAFC;
-  margin-bottom: 8rpx;
+  margin-bottom: 4px;
 }
 
 .task-preview {
-  font-size: 24rpx;
+  font-size: 12px;
   color: #94A3B8;
 }
 
 .task-status {
-  margin-left: 20rpx;
+  margin-left: 10px;
 }
 
 .status-completed {
   color: #10B981;
-  font-size: 32rpx;
+  font-size: 16px;
 }
 
 .status-locked {
-  font-size: 28rpx;
+  font-size: 14px;
 }
 
 .status-current {
-  font-size: 22rpx;
+  font-size: 11px;
   color: #3B82F6;
 }
 
@@ -478,87 +557,92 @@ const goBack = () => {
   align-items: center;
   justify-content: center;
   z-index: 100;
-  padding: 32rpx;
+  padding: 16px;
 }
 
 .task-modal {
   width: 100%;
   max-height: 85vh;
   overflow-y: auto;
-  padding: 40rpx;
+  padding: 20px;
 }
 
 .modal-header {
-  margin-bottom: 32rpx;
+  margin-bottom: 16px;
 }
 
 .modal-day-badge {
   display: inline-block;
   background: linear-gradient(135deg, #3B82F6, #6366F1);
-  padding: 8rpx 20rpx;
-  border-radius: 8rpx;
-  margin-bottom: 16rpx;
+  padding: 4px 10px;
+  border-radius: 4px;
+  margin-bottom: 8px;
 
-  text {
-    font-size: 24rpx;
+  span {
+    font-size: 12px;
     font-weight: 600;
     color: #F8FAFC;
   }
 }
 
 .modal-theme {
-  font-size: 40rpx;
+  font-size: 20px;
   font-weight: 700;
   color: #F8FAFC;
+  margin: 0;
 }
 
 .modal-content {
-  margin-bottom: 32rpx;
+  margin-bottom: 16px;
 }
 
 .content-text {
-  font-size: 28rpx;
+  font-size: 14px;
   color: #F8FAFC;
   line-height: 1.8;
   display: block;
-  margin-bottom: 32rpx;
+  margin-bottom: 16px;
 }
 
 .knowledge-section,
 .action-section,
 .reflection-section {
-  margin-bottom: 28rpx;
-  padding: 24rpx;
+  margin-bottom: 14px;
+  padding: 12px;
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 16rpx;
+  border-radius: 8px;
 }
 
 .section-label {
-  font-size: 26rpx;
+  font-size: 13px;
   font-weight: 600;
   color: #8B5CF6;
   display: block;
-  margin-bottom: 12rpx;
+  margin-bottom: 6px;
 }
 
 .knowledge-text,
 .action-text,
 .reflection-text {
-  font-size: 26rpx;
+  font-size: 13px;
   color: #94A3B8;
   line-height: 1.7;
+  margin: 0;
 }
 
 .modal-actions {
   display: flex;
   flex-direction: column;
-  gap: 16rpx;
+  gap: 8px;
 }
 
 .complete-button {
   width: 100%;
-  height: 96rpx;
-  font-size: 32rpx;
+  height: 48px;
+  font-size: 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
 
   &.completed {
     background: linear-gradient(135deg, #10B981, #059669);
@@ -567,11 +651,12 @@ const goBack = () => {
 
 .close-modal-button {
   width: 100%;
-  height: 80rpx;
+  height: 40px;
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 16rpx;
+  border-radius: 8px;
   color: #94A3B8;
-  font-size: 28rpx;
+  font-size: 14px;
+  cursor: pointer;
 }
 </style>
