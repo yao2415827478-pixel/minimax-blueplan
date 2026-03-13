@@ -107,6 +107,36 @@ html, body {
   touch-action: manipulation;
 }
 
+/* App 容器 */
+.app-container {
+  min-height: 100vh;
+  min-height: 100dvh;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 背景层 */
+.app-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(ellipse at 20% 20%, #1e1b4b 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, #172554 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, #0f172a 0%, #000000 100%);
+  z-index: 0;
+}
+
+/* 内容层 */
+.app-content {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
 #app {
   min-height: 100vh;
   min-height: 100dvh;
