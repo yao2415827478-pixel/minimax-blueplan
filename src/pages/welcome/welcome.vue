@@ -130,6 +130,18 @@ const startAssessment = () => {
   background-clip: text;
 }
 
+.welcome-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
 .app-tagline {
   font-size: 14px;
   color: #94A3B8;
