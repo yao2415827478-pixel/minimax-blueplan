@@ -135,6 +135,31 @@ html, body {
   z-index: 1;
   min-height: 100vh;
   min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+/* 测试内容 */
+.test-content {
+  text-align: center;
+  color: #F8FAFC;
+}
+
+.test-content h1 {
+  font-size: 32px;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #3B82F6, #8B5CF6, #EC4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.test-content p {
+  font-size: 16px;
+  color: #94A3B8;
 }
 
 #app {
