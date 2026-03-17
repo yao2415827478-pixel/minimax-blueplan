@@ -148,7 +148,7 @@ if (mysql) {
 
     console.log('[数据库] 数据表初始化完成');
   } catch (error) {
-    console.error('[数据库] 初始化失败?', error.message);
+    console.error('[数据库] 初始化失败', error.message);
   } finally {
     if (connection) {
       connection.release();
@@ -269,7 +269,7 @@ app.post('/send-sms-code', async (req, res) => {
     const { phone } = req.body;
 
     if (!phone) {
-      return res.status(400).json({ success: false, message: '手机号不能为空? });
+      return res.status(400).json({ success: false, message: '手机号不能为空 });
     }
 
     // 验证手机号格式    if (!/^1[3-9]\d{9}$/.test(phone)) {
@@ -298,19 +298,19 @@ app.post('/send-sms-code', async (req, res) => {
       console.log(`验证码已发送至 ${phone}: ${code}`);
       res.json({
         success: true,
-        message: '验证码已发,
+        message: '验证码已发送,
         // ⚠️ 开发环境返回验证码，生产环境请删除
         code: code
       });
     } else {
       res.status(500).json({
         success: false,
-        message: smsResult.error || '发送失败，请稍后重试?
+        message: smsResult.error || '发送失败，请稍后重试
       });
     }
   } catch (error) {
     console.error('发送验证码失败:', error);
-    res.status(500).json({ success: false, message: '发送失 });
+    res.status(500).json({ success: false, message: '发送失败 });
   }
 });
 
@@ -319,13 +319,13 @@ app.post('/send-sms-code', async (req, res) => {
     const { phone, code } = req.body;
 
     if (!phone || !code) {
-      return res.status(400).json({ success: false, message: '参数不完整? });
+      return res.status(400).json({ success: false, message: '参数不完整 });
     }
 
     const stored = db.verificationCodes.get(phone);
 
     if (!stored) {
-      return res.status(400).json({ success: false, message: '请先获取验证码? });
+      return res.status(400).json({ success: false, message: '请先获取验证码 });
     }
 
     if (Date.now() > stored.expiresAt) {
@@ -334,7 +334,7 @@ app.post('/send-sms-code', async (req, res) => {
     }
 
     if (stored.code !== code) {
-      return res.status(400).json({ success: false, message: '验证码错误? });
+      return res.status(400).json({ success: false, message: '验证码错误 });
     }
 
     // 验证成功，删除验证码
@@ -358,19 +358,19 @@ app.post('/api/users/create', (req, res) => {
     const { phone, surveyResult, startDate } = req.body;
 
     if (!phone) {
-      return res.status(400).json({ success: false, message: '手机号不能为空? });
+      return res.status(400).json({ success: false, message: '手机号不能为空 });
     }
 
     // 检查用户是否已存在
     if (db.users.has(phone)) {
       return res.json({
         success: true,
-        message: '用户已存在?,
+        message: '用户已存在,
         userId: phone
       });
     }
 
-    // 创建新用    db.users.set(phone, {
+    // 创建新用户    db.users.set(phone, {
     phone,
     username: username || null,
     email: email || null,
@@ -406,7 +406,7 @@ app.post('/api/users/update', (req, res) => {
 
     const user = db.users.get(userId);
     if (!user) {
-      return res.status(404).json({ success: false, message: '用户不存在? });
+      return res.status(404).json({ success: false, message: '用户不存在 });
     }
 
     // 更新用户信息
@@ -434,7 +434,7 @@ app.post('/api/users/get', (req, res) => {
     const user = db.users.get(userId);
 
     if (!user) {
-      return res.status(404).json({ success: false, message: '用户不存在? });
+      return res.status(404).json({ success: false, message: '用户不存在 });
     }
 
     res.json({
@@ -453,7 +453,7 @@ app.post('/api/users/sync', (req, res) => {
     const { phone, hasPaid, paymentMethod, paymentTime, orderId, surveyResult, startDate, journalEntries, milestones, planProgress } = req.body;
 
     if (!phone) {
-      return res.status(400).json({ success: false, message: '手机号不能为空? });
+      return res.status(400).json({ success: false, message: '手机号不能为空 });
     }
 
     const existingUser = db.users.get(phone);
@@ -583,7 +583,7 @@ app.post('/query-order', (req, res) => {
     const order = db.orders.get(orderId);
 
     if (!order) {
-      return res.status(404).json({ success: false, message: '订单不存在? });
+      return res.status(404).json({ success: false, message: '订单不存在 });
     }
 
     res.json({
@@ -621,7 +621,7 @@ try {
   });
   console.log('[支付宝] 官方SDK初始化成功);
 } catch (error) {
-  console.error('[支付宝] SDK初始化失败?', error.message);
+  console.error('[支付宝] SDK初始化失败', error.message);
 }
 
 // 创建支付宝订单（使用官方SDK app.post('/alipay/create-order', async (req, res) => {
@@ -629,7 +629,7 @@ try {
     const { amount, subject, description, userId } = req.body;
 
     if (!amount || amount <= 0) {
-      return res.status(400).json({ success: false, message: '金额不正确? });
+      return res.status(400).json({ success: false, message: '金额不正确 });
     }
 
     const orderId = 'ALI' + Date.now() + Math.random().toString(36).substr(2, 6);
@@ -638,7 +638,7 @@ try {
     db.orders.set(orderId, {
       orderId,
       amount,
-      subject: subject || '布鲁计划充值?,
+      subject: subject || '布鲁计划充值,
       description,
       userId,
       method: 'alipay',
@@ -687,7 +687,7 @@ try {
       }
     });
   } catch (error) {
-    console.error('创建支付宝订单失败?', error);
+    console.error('创建支付宝订单失败', error);
     res.status(500).json({ success: false, message: '创建订单失败' });
   }
 });
@@ -738,7 +738,7 @@ app.get('/alipay-return', (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.error('支付宝回调处理失败?', error);
+    console.error('支付宝回调处理失败', error);
     res.status(500).json({ success: false });
   }
 });
@@ -750,7 +750,7 @@ app.get('/alipay-return', (req, res) => {
     const order = db.orders.get(orderId);
 
     if (!order) {
-      return res.status(404).json({ success: false, message: '订单不存在? });
+      return res.status(404).json({ success: false, message: '订单不存在 });
     }
 
     res.json({
@@ -768,12 +768,12 @@ app.get('/alipay-return', (req, res) => {
 
 // 初始化数据库
 initDatabase().then(() => {
-  console.log('[数据库] 初始化完成?);
+  console.log('[数据库] 初始化完成);
 });
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log('=====================================');
-  console.log('  布鲁计划后端API服务已启动?);
+  console.log('  布鲁计划后端API服务已启动);
   console.log('=====================================');
   console.log(`  服务器地址: http://0.0.0.0:${PORT}`);
   console.log(`  您的域名:   http://blue-plan1.cn:${PORT}`);
@@ -794,7 +794,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('⚠️ 阿里云短信配');
   console.log(`  模板CODE: ${ALIYUN_SMS_CONFIG.templateCode}`);
   console.log(`  签名: ${ALIYUN_SMS_CONFIG.signName}`);
-  console.log('  AccessKeySecret: ' + (ALIYUN_SMS_CONFIG.accessKeySecret === 'YOUR_ACCESS_KEY_SECRET' ? '未配模拟模式)' : '已配));
+  console.log('  AccessKeySecret: ' + (ALIYUN_SMS_CONFIG.accessKeySecret === 'YOUR_ACCESS_KEY_SECRET' ? '未配置(模拟模式)' : '已配置));
   console.log('=====================================');
 });
 
