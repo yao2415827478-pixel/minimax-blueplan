@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>布鲁计划 - 戒色辅助应用</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        /* Header */
+        header {
+            padding: 20px 0;
+            text-align: center;
+        }
+        
+        .logo {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 60px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .tagline {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.2rem;
+        }
+        
+        /* Main Content */
+        main {
+            background: white;
+            border-radius: 20px 20px 0 0;
+            padding: 60px 0;
+            margin-top: 40px;
+        }
+        
+        .section {
+            margin-bottom: 60px;
+        }
+        
+        .section-title {
+            font-size: 2rem;
+            color: #333;
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+        }
+        
+        .section-title::after {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 4px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 15px auto 0;
+            border-radius: 2px;
+        }
+        
+        /* App Info */
+        .app-info {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 40px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .info-item {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .info-item .icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+        
+        .info-item h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        /* Features */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+        }
+        
+        .feature-card {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 30px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .feature-card .icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+        
+        .feature-card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+        
+        .feature-card p {
+            color: #666;
+            line-height: 1.8;
+        }
+        
+        /* Download Section */
+        .download-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 60px 40px;
+            text-align: center;
+            color: white;
+        }
+        
+        .download-section h2 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+        
+        .download-section p {
+            opacity: 0.9;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+        
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            color: #667eea;
+            padding: 18px 40px;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-decoration: none;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .version-info {
+            margin-top: 20px;
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+        
+        /* Screenshots */
+        .screenshots {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .screenshot {
+            background: #e9ecef;
+            border-radius: 12px;
+            aspect-ratio: 9/16;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 0.9rem;
+        }
+        
+        /* Contact */
+        .contact {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .contact-item {
+            margin: 15px 0;
+            color: #666;
+        }
+        
+        .contact-item strong {
+            color: #333;
+        }
+        
+        /* Footer */
+        footer {
+            background: #2d3436;
+            color: rgba(255,255,255,0.7);
+            padding: 40px 0;
+            text-align: center;
+        }
+        
+        footer a {
+            color: rgba(255,255,255,0.9);
+            text-decoration: none;
+            margin: 0 15px;
+        }
+        
+        footer a:hover {
+            color: white;
+        }
+        
+        .copyright {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            opacity: 0.6;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .section-title {
+                font-size: 1.5rem;
+            }
+            
+            .download-section {
+                padding: 40px 20px;
+            }
+            
+            .download-btn {
+                padding: 15px 30px;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="logo">🛡️</div>
+            <h1>布鲁计划</h1>
+            <p class="tagline">科学戒色，重塑自我</p>
+        </div>
+    </header>
+    
+    <main>
+        <div class="container">
+            <!-- 应用介绍 -->
+            <section class="section">
+                <h2 class="section-title">关于应用</h2>
+                <div class="app-info">
+                    <p style="font-size: 1.1rem; color: #555; text-align: center; max-width: 800px; margin: 0 auto;">
+                        布鲁计划是一款专注于帮助用户戒除不良习惯、重塑健康生活方式的辅助应用。通过科学的方法论、数据追踪和社区支持，帮助用户建立自律习惯，重获身心自由。
+                    </p>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="icon">📱</div>
+                            <h3>应用名称</h3>
+                            <p>布鲁计划</p>
+                        </div>
+                        <div class="info-item">
+                            <div class="icon">🔢</div>
+                            <h3>版本号</h3>
+                            <p>v1.0.0</p>
+                        </div>
+                        <div class="info-item">
+                            <div class="icon">📦</div>
+                            <h3>应用大小</h3>
+                            <p>约 6.8 MB</p>
+                        </div>
+                        <div class="info-item">
+                            <div class="icon">🤖</div>
+                            <h3>支持系统</h3>
+                            <p>Android 8.0+</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 功能特点 -->
+            <section class="section">
+                <h2 class="section-title">核心功能</h2>
+                <div class="features">
+                    <div class="feature-card">
+                        <div class="icon">📊</div>
+                        <h3>数据追踪</h3>
+                        <p>记录每日状态，可视化展示戒色天数、心情曲线等关键指标，让进步看得见。</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">🎯</div>
+                        <h3>目标管理</h3>
+                        <p>设定阶段性目标，通过里程碑激励，逐步建立长期自律习惯。</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">👥</div>
+                        <h3>社区支持</h3>
+                        <p>加入互助社区，与志同道合的伙伴交流经验，互相鼓励，共同进步。</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">🧘</div>
+                        <h3>冥想练习</h3>
+                        <p>内置冥想引导音频，帮助缓解焦虑、提升专注力，从内心根源解决问题。</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">📚</div>
+                        <h3>知识科普</h3>
+                        <p>提供科学的戒色知识和心理学文章，帮助用户建立正确的认知。</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">🔔</div>
+                        <h3>智能提醒</h3>
+                        <p> customizable 提醒功能，在关键时刻给予正向激励和警示。</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 应用截图 -->
+            <section class="section">
+                <h2 class="section-title">应用预览</h2>
+                <div class="screenshots">
+                    <div class="screenshot">首页截图</div>
+                    <div class="screenshot">数据统计</div>
+                    <div class="screenshot">社区页面</div>
+                    <div class="screenshot">个人中心</div>
+                </div>
+                <p style="text-align: center; color: #999; margin-top: 20px; font-size: 0.9rem;">
+                    * 截图仅供参考，实际界面以应用内为准
+                </p>
+            </section>
+            
+            <!-- 下载 -->
+            <section class="section">
+                <div class="download-section">
+                    <h2>立即下载</h2>
+                    <p>开启你的自律之旅，从今天开始改变</p>
+                    <a href="https://github.com/yao2415827478-pixel/blueplan/releases" class="download-btn" target="_blank">
+                        <span>⬇️</span>
+                        <span>前往 GitHub 下载</span>
+                    </a>
+                    <div class="version-info">
+                        当前版本：v1.0.0 | 更新日期：2026年3月 | 大小：约 6.8 MB
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 联系方式 -->
+            <section class="section">
+                <h2 class="section-title">联系我们</h2>
+                <div class="contact">
+                    <div class="contact-item">
+                        <strong>开发者：</strong>姚鹭杰
+                    </div>
+                    <div class="contact-item">
+                        <strong>邮箱：</strong>support@blue-plan1.cn
+                    </div>
+                    <div class="contact-item">
+                        <strong>官网：</strong>https://blue-plan1.cn
+                    </div>
+                    <div class="contact-item">
+                        <strong>GitHub：</strong>https://github.com/yao2415827478-pixel/blueplan
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <div>
+                <a href="/privacy.html">隐私政策</a>
+                <a href="/terms.html">用户协议</a>
+                <a href="/about.html">关于我们</a>
+            </div>
+            <div class="copyright">
+                <p>&copy; 2026 布鲁计划 Blue Plan. All rights reserved.</p>
+                <p>鄂ICP备XXXXXXXX号</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

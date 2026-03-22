@@ -108,10 +108,10 @@
           <!-- 支付按钮 -->
           <button
             class="pay-button glass-button"
-            :disabled="!selectedMethod || isProcessing"
-            @click="handlePayment"
+            :disabled="!selectedMethod"
+            @click="goToOrderDetail"
           >
-            {{ isProcessing ? '处理中...' : `立即支付 ¥9.9` }}
+            立即支付 ¥9.9
           </button>
 
           <p class="payment-notice">
@@ -254,6 +254,15 @@ const handlePaymentFailure = (error) => {
 // 跳转登录
 const goToLogin = () => {
   router.replace('/login')
+}
+
+// 跳转到订单详情页
+const goToOrderDetail = () => {
+  if (!selectedMethod.value) return
+  // 保存选择的支付方式
+  localStorage.setItem('selectedPaymentMethod', selectedMethod.value)
+  // 跳转到订单详情页
+  router.push('/order-detail')
 }
 </script>
 

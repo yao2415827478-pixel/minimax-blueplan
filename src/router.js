@@ -5,6 +5,7 @@ const Welcome = () => import('./pages/welcome/welcome.vue')
 const Survey = () => import('./pages/Survey.vue')
 const ProductIntro = () => import('./pages/ProductIntro.vue')
 const Payment = () => import('./pages/Payment.vue')
+const OrderDetail = () => import('./pages/OrderDetail.vue')
 const Login = () => import('./pages/Login.vue')
 const Home = () => import('./pages/Home.vue')
 const Plan = () => import('./pages/plan/plan.vue')
@@ -34,6 +35,11 @@ const routes = [
     path: '/payment',
     name: 'Payment',
     component: Payment
+  },
+  {
+    path: '/order-detail',
+    name: 'OrderDetail',
+    component: OrderDetail
   },
   {
     path: '/login',
