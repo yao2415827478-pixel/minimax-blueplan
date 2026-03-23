@@ -1,0 +1,210 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.blueplan.app"
+4    android:versionCode="1"
+5    android:versionName="1.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="23"
+9        android:targetSdkVersion="34" />
+10
+11    <!-- 支付宝权限 -->
+12    <uses-permission android:name="android.permission.INTERNET" />
+12-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:6:5-67
+12-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:6:22-64
+13    <uses-permission android:name="android.permission.ACCESS_NETWORK" />
+13-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:7:5-73
+13-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:7:22-70
+14    <uses-permission android:name="android.permission.ACCESS_WIFI" />
+14-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:8:5-70
+14-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:8:22-67
+15
+16    <permission
+16-->[androidx.core:core:1.10.1] G:\.gradle\caches\transforms-3\cb9762cd401e4da393ba701eb625be99\transformed\core-1.10.1\AndroidManifest.xml:22:5-24:47
+17        android:name="com.blueplan.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+17-->[androidx.core:core:1.10.1] G:\.gradle\caches\transforms-3\cb9762cd401e4da393ba701eb625be99\transformed\core-1.10.1\AndroidManifest.xml:23:9-81
+18        android:protectionLevel="signature" />
+18-->[androidx.core:core:1.10.1] G:\.gradle\caches\transforms-3\cb9762cd401e4da393ba701eb625be99\transformed\core-1.10.1\AndroidManifest.xml:24:9-44
+19
+20    <uses-permission android:name="com.blueplan.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+20-->[androidx.core:core:1.10.1] G:\.gradle\caches\transforms-3\cb9762cd401e4da393ba701eb625be99\transformed\core-1.10.1\AndroidManifest.xml:26:5-97
+20-->[androidx.core:core:1.10.1] G:\.gradle\caches\transforms-3\cb9762cd401e4da393ba701eb625be99\transformed\core-1.10.1\AndroidManifest.xml:26:22-94
+21
+22    <application
+22-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:10:5-69:19
+23        android:allowBackup="true"
+23-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:11:9-35
+24        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+24-->[androidx.core:core:1.10.1] G:\.gradle\caches\transforms-3\cb9762cd401e4da393ba701eb625be99\transformed\core-1.10.1\AndroidManifest.xml:28:18-86
+25        android:debuggable="true"
+26        android:extractNativeLibs="false"
+27        android:icon="@mipmap/ic_launcher"
+27-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:12:9-43
+28        android:label="@string/app_name"
+28-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:13:9-41
+29        android:roundIcon="@mipmap/ic_launcher_round"
+29-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:14:9-54
+30        android:supportsRtl="true"
+30-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:15:9-35
+31        android:testOnly="true"
+32        android:theme="@style/AppTheme"
+32-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:16:9-40
+33        android:usesCleartextTraffic="true" >
+33-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:17:9-44
+34        <activity
+34-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:20:9-40:20
+35            android:name="com.blueplan.app.MainActivity"
+35-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:22:13-41
+36            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
+36-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:21:13-140
+37            android:exported="true"
+37-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:26:13-36
+38            android:label="@string/title_activity_main"
+38-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:23:13-56
+39            android:launchMode="singleTask"
+39-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:25:13-44
+40            android:theme="@style/AppTheme.NoActionBarLaunch" >
+40-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:24:13-62
+41            <intent-filter>
+41-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:28:13-31:29
+42                <action android:name="android.intent.action.MAIN" />
+42-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:29:17-69
+42-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:29:25-66
+43
+44                <category android:name="android.intent.category.LAUNCHER" />
+44-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:30:17-77
+44-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:30:27-74
+45            </intent-filter>
+46
+47            <!-- 支付宝支付结果回调 -->
+48            <intent-filter>
+48-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:34:13-39:29
+49                <action android:name="android.intent.action.VIEW" />
+49-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:35:17-69
+49-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:35:25-66
+50
+51                <category android:name="android.intent.category.DEFAULT" />
+51-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:36:17-76
+51-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:36:27-73
+52                <category android:name="android.intent.category.BROWSABLE" />
+52-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:37:17-78
+52-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:37:27-75
+53
+54                <data android:scheme="blueplan" />
+54-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:38:17-51
+54-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:38:23-48
+55            </intent-filter>
+56        </activity>
+57
+58        <!-- 支付宝支付结果 Activity -->
+59        <activity
+59-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:43:9-49:67
+60            android:name="com.alipay.sdk.app.H5PayActivity"
+60-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:44:13-60
+61            android:configChanges="orientation|keyboardHidden|navigation|orientation|screenSize"
+61-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:45:13-97
+62            android:exported="false"
+62-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:46:13-37
+63            android:launchMode="singleTop"
+63-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:47:13-43
+64            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+64-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:48:13-72
+65
+66        <!-- 支付宝授权结果 Activity -->
+67        <activity
+67-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:52:9-58:67
+68            android:name="com.alipay.sdk.auth.AuthActivity"
+68-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:53:13-60
+69            android:configChanges="orientation|keyboardHidden|navigation|orientation|screenSize"
+69-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:54:13-97
+70            android:exported="false"
+70-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:55:13-37
+71            android:launchMode="singleTop"
+71-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:56:13-43
+72            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+72-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:57:13-72
+73
+74        <provider
+75            android:name="androidx.core.content.FileProvider"
+75-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:61:13-62
+76            android:authorities="com.blueplan.app.fileprovider"
+76-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:62:13-64
+77            android:exported="false"
+77-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:63:13-37
+78            android:grantUriPermissions="true" >
+78-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:64:13-47
+79            <meta-data
+79-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:65:13-67:64
+80                android:name="android.support.FILE_PROVIDER_PATHS"
+80-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:66:17-67
+81                android:resource="@xml/file_paths" />
+81-->H:\布鲁计划（测试版）\android\app\src\main\AndroidManifest.xml:67:17-51
+82        </provider>
+83        <provider
+83-->[androidx.emoji2:emoji2:1.2.0] G:\.gradle\caches\transforms-3\f5df80c9a2cce0602fae5db6505ca0b2\transformed\emoji2-1.2.0\AndroidManifest.xml:24:9-32:20
+84            android:name="androidx.startup.InitializationProvider"
+84-->[androidx.emoji2:emoji2:1.2.0] G:\.gradle\caches\transforms-3\f5df80c9a2cce0602fae5db6505ca0b2\transformed\emoji2-1.2.0\AndroidManifest.xml:25:13-67
+85            android:authorities="com.blueplan.app.androidx-startup"
+85-->[androidx.emoji2:emoji2:1.2.0] G:\.gradle\caches\transforms-3\f5df80c9a2cce0602fae5db6505ca0b2\transformed\emoji2-1.2.0\AndroidManifest.xml:26:13-68
+86            android:exported="false" >
+86-->[androidx.emoji2:emoji2:1.2.0] G:\.gradle\caches\transforms-3\f5df80c9a2cce0602fae5db6505ca0b2\transformed\emoji2-1.2.0\AndroidManifest.xml:27:13-37
+87            <meta-data
+87-->[androidx.emoji2:emoji2:1.2.0] G:\.gradle\caches\transforms-3\f5df80c9a2cce0602fae5db6505ca0b2\transformed\emoji2-1.2.0\AndroidManifest.xml:29:13-31:52
+88                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+88-->[androidx.emoji2:emoji2:1.2.0] G:\.gradle\caches\transforms-3\f5df80c9a2cce0602fae5db6505ca0b2\transformed\emoji2-1.2.0\AndroidManifest.xml:30:17-75
+89                android:value="androidx.startup" />
+89-->[androidx.emoji2:emoji2:1.2.0] G:\.gradle\caches\transforms-3\f5df80c9a2cce0602fae5db6505ca0b2\transformed\emoji2-1.2.0\AndroidManifest.xml:31:17-49
+90            <meta-data
+90-->[androidx.lifecycle:lifecycle-process:2.6.1] G:\.gradle\caches\transforms-3\be8e81d93f45a264831b041090c688d6\transformed\lifecycle-process-2.6.1\AndroidManifest.xml:29:13-31:52
+91                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+91-->[androidx.lifecycle:lifecycle-process:2.6.1] G:\.gradle\caches\transforms-3\be8e81d93f45a264831b041090c688d6\transformed\lifecycle-process-2.6.1\AndroidManifest.xml:30:17-78
+92                android:value="androidx.startup" />
+92-->[androidx.lifecycle:lifecycle-process:2.6.1] G:\.gradle\caches\transforms-3\be8e81d93f45a264831b041090c688d6\transformed\lifecycle-process-2.6.1\AndroidManifest.xml:31:17-49
+93            <meta-data
+93-->[androidx.profileinstaller:profileinstaller:1.3.0] G:\.gradle\caches\transforms-3\d2f48f616d31a3ad462602972cc318fb\transformed\profileinstaller-1.3.0\AndroidManifest.xml:29:13-31:52
+94                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+94-->[androidx.profileinstaller:profileinstaller:1.3.0] G:\.gradle\caches\transforms-3\d2f48f616d31a3ad462602972cc318fb\transformed\profileinstaller-1.3.0\AndroidManifest.xml:30:17-85
+95                android:value="androidx.startup" />
+95-->[androidx.profileinstaller:profileinstaller:1.3.0] G:\.gradle\caches\transforms-3\d2f48f616d31a3ad462602972cc318fb\transformed\profileinstaller-1.3.0\AndroidManifest.xml:31:17-49
+96        </provider>
+97
+98        <receiver
+98-->[androidx.profileinstaller:profileinstaller:1.3.0] G:\.gradle\caches\transforms-3\d2f48f616d31a3ad462602972cc318fb\transformed\profileinstaller-1.3.0\AndroidManifest.xml:34:9-52:20
+99            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+99-->[androidx.profileinstaller:profileinstaller:1.3.0] G:\.gradle\caches\transforms-3\d2f48f616d31a3ad462602972cc318fb\transformed\profileinstaller-1.3.0\AndroidManifest.xml:35:13-76
+100            android:directBootAware="false"
+100-->[androidx.profileinstaller:profileinstaller:1.3.0] G:\.gradle\caches\transforms-3\d2f48f616d31a3ad462602972cc318fb\transformed\profileinstaller-1.3.0\AndroidManifest.xml:36:13-44
+101            android:enabled="true"
+101-->[androidx.profileinstaller:profileinstaller:1.3.0] G:\.gradle\caches\transforms-3\d2f48f616d31a3ad462602972cc318fb\transformed\profileinstaller-1.3.0\AndroidManifest.xml:37:13-35
+102            android:exported="true"
+102-->[androidx.profileinstaller:profileinstaller:1.3.0] G:\.gradle\caches\transforms-3\d2f48f616d31a3ad462602972cc318fb\transformed\profileinstaller-1.3.0\AndroidManifest.xml:38:13-36
+103            android:permission="android.permission.DUMP" >
+103-->[androidx.profileinstaller:profileinstaller:1.3.0] G:\.gradle\caches\transforms-3\d2f48f616d31a3ad462602972cc318fb\transformed\profileinstaller-1.3.0\AndroidManifest.xml:39:13-57
+104            <intent-filter>
+104-->[androidx.profileinstaller:profileinstaller:1.3.0] G:\.gradle\caches\transforms-3\d2f48f616d31a3ad462602972cc318fb\transformed\profileinstaller-1.3.0\AndroidManifest.xml:40:13-42:29
+105                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+105-->[androidx.profileinstaller:profileinstaller:1.3.0] G:\.gradle\caches\transforms-3\d2f48f616d31a3ad462602972cc318fb\transformed\profileinstaller-1.3.0\AndroidManifest.xml:41:17-91
+105-->[androidx.profileinstaller:profileinstaller:1.3.0] G:\.gradle\caches\transforms-3\d2f48f616d31a3ad462602972cc318fb\transformed\profileinstaller-1.3.0\AndroidManifest.xml:41:25-88
+106            </intent-filter>
+107            <intent-filter>
+107-->[androidx.profileinstaller:profileinstaller:1.3.0] G:\.gradle\caches\transforms-3\d2f48f616d31a3ad462602972cc318fb\transformed\profileinstaller-1.3.0\AndroidManifest.xml:43:13-45:29
+108                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+108-->[androidx.profileinstaller:profileinstaller:1.3.0] G:\.gradle\caches\transforms-3\d2f48f616d31a3ad462602972cc318fb\transformed\profileinstaller-1.3.0\AndroidManifest.xml:44:17-85
+108-->[androidx.profileinstaller:profileinstaller:1.3.0] G:\.gradle\caches\transforms-3\d2f48f616d31a3ad462602972cc318fb\transformed\profileinstaller-1.3.0\AndroidManifest.xml:44:25-82
+109            </intent-filter>
+110            <intent-filter>
+110-->[androidx.profileinstaller:profileinstaller:1.3.0] G:\.gradle\caches\transforms-3\d2f48f616d31a3ad462602972cc318fb\transformed\profileinstaller-1.3.0\AndroidManifest.xml:46:13-48:29
+111                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+111-->[androidx.profileinstaller:profileinstaller:1.3.0] G:\.gradle\caches\transforms-3\d2f48f616d31a3ad462602972cc318fb\transformed\profileinstaller-1.3.0\AndroidManifest.xml:47:17-88
+111-->[androidx.profileinstaller:profileinstaller:1.3.0] G:\.gradle\caches\transforms-3\d2f48f616d31a3ad462602972cc318fb\transformed\profileinstaller-1.3.0\AndroidManifest.xml:47:25-85
+112            </intent-filter>
+113            <intent-filter>
+113-->[androidx.profileinstaller:profileinstaller:1.3.0] G:\.gradle\caches\transforms-3\d2f48f616d31a3ad462602972cc318fb\transformed\profileinstaller-1.3.0\AndroidManifest.xml:49:13-51:29
+114                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+114-->[androidx.profileinstaller:profileinstaller:1.3.0] G:\.gradle\caches\transforms-3\d2f48f616d31a3ad462602972cc318fb\transformed\profileinstaller-1.3.0\AndroidManifest.xml:50:17-95
+114-->[androidx.profileinstaller:profileinstaller:1.3.0] G:\.gradle\caches\transforms-3\d2f48f616d31a3ad462602972cc318fb\transformed\profileinstaller-1.3.0\AndroidManifest.xml:50:25-92
+115            </intent-filter>
+116        </receiver>
+117    </application>
+118
+119</manifest>

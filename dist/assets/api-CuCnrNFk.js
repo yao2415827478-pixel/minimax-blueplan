@@ -1,0 +1,1 @@
+const e={database:{baseUrl:"https://blue-plan1.cn"},smsApi:{baseUrl:"https://blue-plan1.cn",sendCode:"/send-sms-code",verifyCode:"/verify-sms-code"}},a=s=>`${e.database.baseUrl}${s}`,t=s=>`${e.smsApi.baseUrl}${e.smsApi[s]}`;export{t as a,a as g};
