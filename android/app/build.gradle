@@ -6,20 +6,15 @@ android {
 
     // 编译选项 - 指定Java版本
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
     }
     
-    // Java工具链 - 使用Java 17
+    // Java工具链 - 使用Java 21
     java {
         toolchain {
-            languageVersion = JavaLanguageVersion.of(17)
+            languageVersion = JavaLanguageVersion.of(21)
         }
-    }
-    
-    // 强制使用Java 17
-    tasks.withType(JavaCompile) {
-        options.release = 17
     }
 
     // 签名配置

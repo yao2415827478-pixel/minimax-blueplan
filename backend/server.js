@@ -1,800 +1,800 @@
-/**
- * 布鲁计划后端API服务
- * 服务器地址: 120.27.139.123
- * 域名: blue-plan1.cn
- */
-
-// 加载环境变量
-require('dotenv').config();
-
 const express = require('express');
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const https = require('https');
-const crypto = require('crypto');
-const { URL } = require('url');
-
 const app = express();
-const PORT = process.env.PORT || 3000;
+const port = 3000;
 
-// 中间件 app.use(cors());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-
-// ==================== 健康检查端点====================
-app.get('/api/health', (req, res) => {
-  res.json({
-    success: true,
-    message: '布鲁计划后端API服务运行正常',
-    timestamp: new Date().toISOString(),
-    version: '1.0.0',
-    endpoints: [
-      '/send-sms-code',
-      '/verify-sms-code',
-      '/api/users/create',
-      '/api/users/update',
-      '/api/users/get',
-      '/api/users/sync',
-      '/create-order',
-      '/alipay/create-order'
-    ]
-  });
+// CORS 中间件 - 允许所有来源
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  // 处理预检请求
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
 });
 
-app.get('/', (req, res) => {
-  res.json({
-    success: true,
-    message: '欢迎使用布鲁计划后端API',
-    timestamp: new Date().toISOString(),
-    version: '1.0.0'
-  });
-});
+// 中间件
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// ==================== 阿里云短信配置====================
-// 使用环境变量保护敏感信息
-const ALIYUN_SMS_CONFIG = {
-  accessKeyId: process.env.ALIYUN_ACCESS_KEY_ID || 'YOUR_ALIYUN_ACCESS_KEY_ID',
-  accessKeySecret: process.env.ALIYUN_ACCESS_KEY_SECRET || 'YOUR_ALIYUN_ACCESS_KEY_SECRET',
-  signName: '武汉市洪山区乔乔尼服装店',      // 短信签名
-  templateCode: 'SMS_501700483', // 短信模板CODE
-  region: 'cn-hangzhou'
+// ==================== 内存数据库（生产环境应使用真实数据库）====================
+const db = {
+  // 邀请码表
+  inviteCodes: new Map(),
+  // 用户表
+  users: new Map(),
+  // 订单表
+  orders: new Map(),
+  // 邀请关系表
+  inviteRelations: new Map(),
+  // 奖励记录表
+  rewards: new Map(),
+  // 提现记录表
+  withdrawals: new Map()
 };
 
-// ==================== 支付宝配置====================
+// 初始化邀请码
+function initTestData() {
+  // 正式版邀请码（给用户使用）
+  const publicCodes = [
+    { code: 'BLUE2024', maxUses: 1000 },
+    { code: 'VIP666', maxUses: 500 },
+    { code: 'NEWUSER', maxUses: 2000 },
+    { code: 'START99', maxUses: 1000 }
+  ];
+  
+  publicCodes.forEach(({ code, maxUses }) => {
+    db.inviteCodes.set(code, {
+      code: code,
+      createdBy: 'system',
+      maxUses: maxUses,
+      usedCount: 0,
+      discountAmount: 200, // 2元 = 200分
+      isActive: true,
+      type: 'public',
+      createdAt: new Date().toISOString()
+    });
+  });
+  
+  // 内部专属验证码（跳过支付）
+  db.inviteCodes.set('YAOLUJIE2024', {
+    code: 'YAOLUJIE2024',
+    createdBy: 'admin',
+    maxUses: 9999,
+    usedCount: 0,
+    discountAmount: 1290, // 全额减免 = 1290分（12.9元）
+    isActive: true,
+    type: 'internal',
+    skipPayment: true, // 标记为跳过支付
+    createdAt: new Date().toISOString()
+  });
+  
+  console.log('[数据库] 公开邀请码已初始化:', publicCodes.map(c => c.code));
+  console.log('[数据库] 内部专属验证码已初始化: YAOLUJIE2024');
+}
+
+initTestData();
+
+// ==================== 支付宝配置 ====================
+function formatPrivateKey(key) {
+  if (!key) return key;
+  if (key.includes('-----BEGIN')) return key;
+  return `-----BEGIN RSA PRIVATE KEY-----\n${key.match(/.{1,64}/g).join('\n')}\n-----END RSA PRIVATE KEY-----`;
+}
+
+function formatPublicKey(key) {
+  if (!key) return key;
+  if (key.includes('-----BEGIN')) return key;
+  return `-----BEGIN PUBLIC KEY-----\n${key.match(/.{1,64}/g).join('\n')}\n-----END PUBLIC KEY-----`;
+}
+
 const ALIPAY_CONFIG = {
   appId: process.env.ALIPAY_APP_ID || '2021006132651155',
-  privateKey: process.env.ALIPAY_PRIVATE_KEY || 'MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCPwujDmGR6kan5ywxkC5lUoMBIxQ9XIXXN/QXnmH/17N5XCZqlIEqoAT+ixYFqfiqYKfjJxsfdRG6+nS7HDkwUiHm9sZqwK3nzL/8icNFYCliIe5/f/fFmnj11QcEVP1iH7N6jyUWucwDqmu/muwQqmkCzizmVBskA2lUBwIZaXbN7nRq1eWcX5uqWohsvnDfK0+UC01a5Jjal5ZsfSi6xLh3Id4XQ6rOUSNx24FsEWfTRNf7FTMdqsL+RtnAIYxP/h0fypFZk5dXoZHcOHZJsY2gcRZuB5YkQ2pMXg5cVs2xdlyW4mRZBNU2/RUXm76zfpAwyj2LpHhtEMiTmCDJTAgMBAAECggEAG0Ffsd2NhzNgn2wgkEMmscW8Ts+VhfZhCEmlOfBOqkhbKvM2L4I8xTdfYjPBwnfjCXBDq7WVJN0Zhef0+2Y5hFcPhahLZIUJnNKHs3biKafkexO9DtFtWAA+NKHfwnB9D2AYIcNCA73n+ZKgUwU31//grmmB5EAiEZhTL37Zuf3q9Pq9NZFAxte0E0MlqSWqVO0IE4egLkUCV4k0hr01ucpbIoeKrsZ0Rc1hhTOx1Y98JJ31jqa/b0C+1s3o/ZytyRGpIn86nOFFqhC1FNGG5xoCbYcno9P6AickU/V1tYHa/I24PktSj045+BoG+DaZw918DB4sirtXj+gvVyZaSQKBgQDKgogUTNuIlgFuA9p2vKBvwgk3A9aXhdPJkL/U7pZzp4bMWCVToITUygzfexJfsQeMatn4dOZ+8y2bAMTQbji0QAxm4+2fSUpiryiHeFgjbQmG5ht7I6vElL/0M0FYkkkFTPOpsTae6StzKtrWDoEv2gLrbfGW3VMTi8nx+9FnrwKBgQC1u+ACDhMok1E0PBiIphgpzpQ5aMB3dfiFGF79OUINBP7YBiL9INGbCjx/JTFfdC2YYjIH6JebO0jAEizH2dZn9BJk2whIYblF3jhjl9w6GFMR0zbGCsn0fRG7CLtG1n+X8u8qcC8AWFTTIpSxhlsJ+3y+ah7oBxkMzebdZykknQKBgQCpIbGjOrmTbq0NBBzeVBWuoSDvGL6N2FCUpNcCcK2pND5pxiiOmp611XZA49npn8HNLaSUVJX5awIo1dCKv7OOH3v8Jtrb0OtWVjIESqdaFwQA7YgAJT+dNBrJSlGGNs7TpXxPulkDCXyneCBC7ORKYctUc4N1W625wmNMPeObswKBgQCDULTlZzwqtoAXqVDk9HdDRjTOYsWnzEN+EIUanlP+ylxGxfBkTWGHkNbz3HEXkwAbOuEB2+woS6ceukNHST1msfLUk3whqRNRy+ec9y83fzoPCDps0YDqO7EjH4ULA5UAu5ZbaOJdcnYgdb1RpU6FIQYbJN0eNXrBSMqHsrIE9QKBgEIgWGRUh42AkD7lmkvEUlthK5CbCdpuL5sDUBpGegXiKbmoB6ZtdAug6hPdA9d1GVXp/CjVBkHGyD2yL+bLZ1UPoUysN8ifR857wDyebe0zAq/dbvw/jKfRiFgejLH++NTrJzhbFqv0swFLgCpzfXDZ/GsePL84oNg5ekaFp+5f',
-  alipayPublicKey: process.env.ALIPAY_PUBLIC_KEY || 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3BYEZ1oYVzkPZg9NH5PrPkQZHj0sJV4/KWl8kdmAxLWQEvzLOaZUAIbSQ7+4kKpvhaMrYrsQtzFbCKsLQE1kQ4YjE+IpNEOwBcF6rk1JbDXU4VyOT4+A9KNLkF7VpKHu1DTq4HNccn++e6T6qa7nNlQB3/O/6l7ZMcrVnp7fxq+0+U1ik6wrECa/GtdeyEwclq3L7TYHHrmhoWQjTmsKAW20X7Quv5ZH6KWQrXhuVY0N8EeGXcEk4xwpYvebpsnJy4v2VfWTZiTbjbIK04zzUFLLlKy3a/Empz2dSLz5dKpptusBcum1YwTVTqmJXPxc9GXT1EdUVFEZJcwm4eVXOwIDAQAB',
+  privateKey: formatPrivateKey(process.env.ALIPAY_PRIVATE_KEY),
+  alipayPublicKey: formatPublicKey(process.env.ALIPAY_PUBLIC_KEY),
   gateway: process.env.ALIPAY_GATEWAY || 'https://openapi.alipay.com/gateway.do',
   notifyUrl: process.env.ALIPAY_NOTIFY_URL || 'https://blue-plan1.cn/alipay-notify',
   returnUrl: process.env.ALIPAY_RETURN_URL || 'https://blue-plan1.cn/alipay-return'
 };
 
-// ==================== MySQL数据库配置====================
-const MYSQL_CONFIG = {
-  host: 'localhost',
-  user: 'root',
-  password: '',
-  database: 'blueplan'
-};
-
-// 导入MySQL
-let mysql;
-try {
-  mysql = require('mysql2/promise');
-} catch (e) {
-  console.log('MySQL驱动未安装，使用内存存储');
-}
-
-// MySQL连接池 let pool = null;
-if (mysql) {
-  pool = mysql.createPool({
-    host: MYSQL_CONFIG.host,
-    user: MYSQL_CONFIG.user,
-    password: MYSQL_CONFIG.password,
-    database: MYSQL_CONFIG.database,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-  });
-  console.log('[数据库] MySQL连接池已创建');
-}
-
-// 初始化数据库 async function initDatabase() {
-  if (!pool) return;
-
-  let connection;
-  try {
-    connection = await pool.getConnection();
-    // 创建用户表    await connection.execute(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        phone VARCHAR(20) UNIQUE NOT NULL,
-        nickname VARCHAR(50),
-        avatar VARCHAR(255),
-        gender VARCHAR(10),
-        age INT,
-        vip_level INT DEFAULT 0,
-        vip_expire DATE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      )
-    `);
-
-    // 创建验证码表
-    await connection.execute(`
-      CREATE TABLE IF NOT EXISTS verification_codes (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        phone VARCHAR(20) NOT NULL,
-        code VARCHAR(10) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        expires_at TIMESTAMP,
-        INDEX idx_phone (phone)
-      )
-    `);
-
-    // 创建订单表    await connection.execute(`
-      CREATE TABLE IF NOT EXISTS orders (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        order_id VARCHAR(50) UNIQUE NOT NULL,
-        user_id INT NOT NULL,
-        amount DECIMAL(10,2) NOT NULL,
-        payment_method VARCHAR(20),
-        status VARCHAR(20) DEFAULT 'pending',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      )
-    `);
-
-    console.log('[数据库] 数据表初始化完成');
-  } catch (error) {
-    console.error('[数据库] 初始化失败', error.message);
-  } finally {
-    if (connection) {
-      connection.release();
-    }
-  }
-}
-
-// 模拟数据库（备用） const db = {
-  users: new Map(),
-  verificationCodes: new Map(),
-  orders: new Map()
-};
-
-// ==================== 阿里云短信发送函数====================
-// 使用阿里云POP API发送短信 async function sendAliyunSms(phone, code) {
-  // 检查是否配置了AccessKeySecret
-  if (!ALIYUN_SMS_CONFIG.accessKeySecret || ALIYUN_SMS_CONFIG.accessKeySecret === 'YOUR_ACCESS_KEY_SECRET') {
-    console.log('[警告] 未配置AccessKeySecret，使用模拟模式);
-    console.log(`[模拟] 阿里云短信发送到 ${phone}, 验证码: ${code}`);
-    return { success: true, message: '短信发送成功（模拟） };
-  }
-
-  try {
-    // 公共参数
-    const params = {
-      AccessKeyId: ALIYUN_SMS_CONFIG.accessKeyId,
-      Action: 'SendSms',
-      Format: 'JSON',
-      PhoneNumbers: phone,
-      SignatureMethod: 'HMAC-SHA1',
-      SignatureNonce: Math.random().toString(36).substr(2, 32),
-      SignatureVersion: '1.0',
-      SignName: ALIYUN_SMS_CONFIG.signName,
-      TemplateCode: ALIYUN_SMS_CONFIG.templateCode,
-      TemplateParam: JSON.stringify({ code: code }),
-      Timestamp: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
-      Version: '2017-05-25',
-      RegionId: ALIYUN_SMS_CONFIG.region
-    };
-
-    // 计算签名
-    const signature = computeSignature(params, ALIYUN_SMS_CONFIG.accessKeySecret);
-    params.Signature = signature;
-
-    // 发送请求    const result = await requestRPC('dysmsapi.aliyuncs.com', params);
-    console.log('阿里云短信发送结果', result);
-
-    if (result.Code === 'OK') {
-      return { success: true, result };
-    } else {
-      return { success: false, error: result.Message };
-    }
-  } catch (error) {
-    console.error('阿里云短信发送失败', error);
-    return { success: false, error: error.message };
-  }
-}
-
-// 计算阿里云API签名
-function computeSignature(parameters, accessKeySecret) {
-  // 参数排序
-  const sortedParams = Object.keys(parameters).sort();
-  const queryString = sortedParams
-    .map(key => encodeURIComponent(key) + '=' + encodeURIComponent(parameters[key]))
-    .join('&');
-
-  // 构造待签名字符串  const stringToSign = 'POST&' + encodeURIComponent('/') + '&' + encodeURIComponent(queryString);
-
-  // HMAC-SHA1签名
-  const signature = crypto
-    .createHmac('sha1', accessKeySecret + '&')
-    .update(stringToSign)
-    .digest('base64');
-
-  return signature;
-}
-
-// 发送RPC请求
-function requestRPC(host, params) {
-  return new Promise((resolve, reject) => {
-    const data = Object.keys(params)
-      .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
-      .join('&');
-
-    const options = {
-      hostname: host,
-      path: '/',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Content-Length': Buffer.byteLength(data)
-      }
-    };
-
-    const req = https.request(options, (res) => {
-      let body = '';
-      res.on('data', chunk => body += chunk);
-      res.on('end', () => {
-        try {
-          resolve(JSON.parse(body));
-        } catch (e) {
-          reject(e);
-        }
-      });
-    });
-
-    req.on('error', reject);
-    req.write(data);
-    req.end();
-  });
-}
-
-// ==================== 短信验证码API ====================
-
-// 发送短信验证码
-app.post('/send-sms-code', async (req, res) => {
-  try {
-    const { phone } = req.body;
-
-    if (!phone) {
-      return res.status(400).json({ success: false, message: '手机号不能为空 });
-    }
-
-    // 验证手机号格式    if (!/^1[3-9]\d{9}$/.test(phone)) {
-      return res.status(400).json({ success: false, message: '手机号格式不正确' });
-    }
-
-    // 检查是否频繁发送（1分钟内只能发一次）
-    const existing = db.verificationCodes.get(phone);
-    if (existing && Date.now() - existing.createdAt < 60000) {
-      return res.status(400).json({ success: false, message: '发送太频繁，请稍后再试' });
-    }
-
-    // 生成6位验证码
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-
-    // 存储验证码    db.verificationCodes.set(phone, {
-      code: code,
-      expiresAt: Date.now() + 5 * 60 * 1000, // 5分钟有效
-      createdAt: Date.now()
-    });
-
-    // 调用阿里云短信API发送验证码
-    const smsResult = await sendAliyunSms(phone, code);
-
-    if (smsResult.success) {
-      console.log(`验证码已发送至 ${phone}: ${code}`);
-      res.json({
-        success: true,
-        message: '验证码已发送,
-        // ⚠️ 开发环境返回验证码，生产环境请删除
-        code: code
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: smsResult.error || '发送失败，请稍后重试
-      });
-    }
-  } catch (error) {
-    console.error('发送验证码失败:', error);
-    res.status(500).json({ success: false, message: '发送失败 });
-  }
-});
-
-// 验证短信验证码 app.post('/verify-sms-code', (req, res) => {
-  try {
-    const { phone, code } = req.body;
-
-    if (!phone || !code) {
-      return res.status(400).json({ success: false, message: '参数不完整 });
-    }
-
-    const stored = db.verificationCodes.get(phone);
-
-    if (!stored) {
-      return res.status(400).json({ success: false, message: '请先获取验证码 });
-    }
-
-    if (Date.now() > stored.expiresAt) {
-      db.verificationCodes.delete(phone);
-      return res.status(400).json({ success: false, message: '验证码已过期' });
-    }
-
-    if (stored.code !== code) {
-      return res.status(400).json({ success: false, message: '验证码错误 });
-    }
-
-    // 验证成功，删除验证码
-    db.verificationCodes.delete(phone);
-
-    res.json({
-      success: true,
-      message: '验证成功'
-    });
-  } catch (error) {
-    console.error('验证失败:', error);
-    res.status(500).json({ success: false, message: '验证失败' });
-  }
-});
-
-// ==================== 用户API ====================
-
-// 创建用户
-app.post('/api/users/create', (req, res) => {
-  try {
-    const { phone, surveyResult, startDate } = req.body;
-
-    if (!phone) {
-      return res.status(400).json({ success: false, message: '手机号不能为空 });
-    }
-
-    // 检查用户是否已存在
-    if (db.users.has(phone)) {
-      return res.json({
-        success: true,
-        message: '用户已存在,
-        userId: phone
-      });
-    }
-
-    // 创建新用户    db.users.set(phone, {
-    phone,
-    username: username || null,
-    email: email || null,
-    surveyResult: surveyResult || null,
-    startDate: startDate || Date.now(),
-    createdAt: Date.now(),
-    hasPaid: false,
-    paymentTime: null,
-    orderId: null
-});
-
-    console.log(`新用户创建? ${phone}`);
-
-    res.json({
-      success: true,
-      message: '用户创建成功',
-      userId: phone
-    });
-  } catch (error) {
-    console.error('创建用户失败:', error);
-    res.status(500).json({ success: false, message: '创建失败' });
-  }
-});
-
-// 更新用户
-app.post('/api/users/update', (req, res) => {
-  try {
-    const { userId, ...updates } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({ success: false, message: '用户ID不能为空' });
-    }
-
-    const user = db.users.get(userId);
-    if (!user) {
-      return res.status(404).json({ success: false, message: '用户不存在 });
-    }
-
-    // 更新用户信息
-    db.users.set(userId, { ...user, ...updates });
-
-    res.json({
-      success: true,
-      message: '更新成功'
-    });
-  } catch (error) {
-    console.error('更新用户失败:', error);
-    res.status(500).json({ success: false, message: '更新失败' });
-  }
-});
-
-// 获取用户
-app.post('/api/users/get', (req, res) => {
-  try {
-    const { userId } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({ success: false, message: '用户ID不能为空' });
-    }
-
-    const user = db.users.get(userId);
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: '用户不存在 });
-    }
-
-    res.json({
-      success: true,
-      user
-    });
-  } catch (error) {
-    console.error('获取用户失败:', error);
-    res.status(500).json({ success: false, message: '获取失败' });
-  }
-});
-
-// 同步用户数据
-app.post('/api/users/sync', (req, res) => {
-  try {
-    const { phone, hasPaid, paymentMethod, paymentTime, orderId, surveyResult, startDate, journalEntries, milestones, planProgress } = req.body;
-
-    if (!phone) {
-      return res.status(400).json({ success: false, message: '手机号不能为空 });
-    }
-
-    const existingUser = db.users.get(phone);
-
-    if (existingUser) {
-      // 更新现有用户
-      db.users.set(phone, {
-        ...existingUser,
-        hasPaid: hasPaid || existingUser.hasPaid,
-        paymentMethod: paymentMethod || existingUser.paymentMethod,
-        paymentTime: paymentTime || existingUser.paymentTime,
-        orderId: orderId || existingUser.orderId,
-        surveyResult: surveyResult || existingUser.surveyResult,
-        startDate: startDate || existingUser.startDate,
-        journalEntries: journalEntries || existingUser.journalEntries,
-        milestones: milestones || existingUser.milestones,
-        planProgress: planProgress || existingUser.planProgress,
-        updatedAt: Date.now()
-      });
-    } else {
-      // 创建新用      db.users.set(phone, {
-        phone,
-        hasPaid: hasPaid || false,
-        paymentMethod: paymentMethod || null,
-        paymentTime: paymentTime || null,
-        orderId: orderId || null,
-        surveyResult: surveyResult || null,
-        startDate: startDate || null,
-        journalEntries: journalEntries || null,
-        milestones: milestones || null,
-        planProgress: planProgress || null,
-        createdAt: Date.now()
-      });
-    }
-
-    console.log(`用户数据同步: ${phone}`);
-
-    res.json({
-      success: true,
-      message: '同步成功'
-    });
-  } catch (error) {
-    console.error('同步失败:', error);
-    res.status(500).json({ success: false, message: '同步失败' });
-  }
-});
-
-// ==================== 微信支付API ====================
-
-// 创建微信支付订单
-app.post('/create-order', (req, res) => {
-  try {
-    const { amount, subject, description, userId } = req.body;
-
-    const orderId = 'WX' + Date.now() + Math.random().toString(36).substr(2, 6);
-
-    // 存储订单
-    db.orders.set(orderId, {
-      orderId,
-      amount,
-      subject,
-      description,
-      userId,
-      method: 'wechat',
-      status: 'pending',
-      createdAt: Date.now()
-    });
-
-    console.log(`微信订单创建: ${orderId}, 金额: ${amount}`);
-
-    res.json({
-      success: true,
-      orderId,
-      payParams: {
-        appId: 'your_app_id',
-        timeStamp: Math.floor(Date.now() / 1000).toString(),
-        nonceStr: Math.random().toString(36).substr(2),
-        package: 'prepay_id=wx123456789',
-        signType: 'MD5'
-      }
-    });
-  } catch (error) {
-    console.error('创建微信订单失败:', error);
-    res.status(500).json({ success: false, message: '创建订单失败' });
-  }
-});
-
-// 微信支付回调
-app.post('/wechat-notify', (req, res) => {
-  try {
-    const { orderId, transactionId, resultCode } = req.body;
-
-    console.log(`微信支付回调: ${orderId}, 状 ${resultCode}`);
-
-    if (resultCode === 'SUCCESS') {
-      const order = db.orders.get(orderId);
-      if (order) {
-        order.status = 'success';
-        order.transactionId = transactionId;
-        order.paidAt = Date.now();
-        db.orders.set(orderId, order);
-
-        if (order.userId) {
-          const user = db.users.get(order.userId);
-          if (user) {
-            user.hasPaid = true;
-            user.paymentTime = Date.now();
-            user.orderId = orderId;
-            db.users.set(order.userId, user);
-          }
-        }
-      }
-    }
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('微信支付回调处理失败:', error);
-    res.status(500).json({ success: false });
-  }
-});
-
-// 查询微信订单
-app.post('/query-order', (req, res) => {
-  try {
-    const { orderId } = req.body;
-
-    const order = db.orders.get(orderId);
-
-    if (!order) {
-      return res.status(404).json({ success: false, message: '订单不存在 });
-    }
-
-    res.json({
-      success: true,
-      status: order.status,
-      order
-    });
-  } catch (error) {
-    console.error('查询订单失败:', error);
-    res.status(500).json({ success: false, message: '查询失败' });
-  }
-});
-
-// ==================== 支付宝官方SDK ====================
+// ==================== 支付宝SDK初始化 ====================
 let alipaySdk = null;
-
 try {
-  // 尝试不同的导入方式  let AlipaySdkFactory;
-  try {
-    AlipaySdkFactory = require('alipay-sdk').default;
-  } catch (e1) {
-    try {
-      AlipaySdkFactory = require('alipay-sdk');
-    } catch (e2) {
-      throw new Error('无法导入alipay-sdk');
-    }
-  }
-
-  alipaySdk = new AlipaySdkFactory({
+  const { AlipaySdk } = require('alipay-sdk');
+  alipaySdk = new AlipaySdk({
     appId: ALIPAY_CONFIG.appId,
     privateKey: ALIPAY_CONFIG.privateKey,
     alipayPublicKey: ALIPAY_CONFIG.alipayPublicKey,
     gateway: ALIPAY_CONFIG.gateway,
     signType: 'RSA2'
   });
-  console.log('[支付宝] 官方SDK初始化成功);
+  console.log('[支付宝] SDK初始化成功');
 } catch (error) {
-  console.error('[支付宝] SDK初始化失败', error.message);
+  console.error('[支付宝] SDK初始化失败:', error.message);
 }
 
-// 创建支付宝订单（使用官方SDK app.post('/alipay/create-order', async (req, res) => {
+// ==================== 邀请码API ====================
+
+// 验证邀请码
+app.post('/api/invite/validate', (req, res) => {
   try {
-    const { amount, subject, description, userId } = req.body;
-
-    if (!amount || amount <= 0) {
-      return res.status(400).json({ success: false, message: '金额不正确 });
+    const { inviteCode } = req.body;
+    
+    if (!inviteCode || inviteCode.length < 4) {
+      return res.json({
+        success: false,
+        error: { message: '邀请码格式不正确' }
+      });
     }
 
-    const orderId = 'ALI' + Date.now() + Math.random().toString(36).substr(2, 6);
-
-    // 存储订单
-    db.orders.set(orderId, {
-      orderId,
-      amount,
-      subject: subject || '布鲁计划充值,
-      description,
-      userId,
-      method: 'alipay',
-      status: 'pending',
-      createdAt: Date.now()
-    });
-
-    let orderStr = '';
-
-    // 使用官方SDK生成支付参数
-    if (alipaySdk) {
-      try {
-        const result = await alipaySdk.exec(
-          'alipay.trade.app.pay',
-          {
-            bizContent: {
-              out_trade_no: orderId,
-              total_amount: amount,
-              subject: subject || '布鲁计划充值',
-              product_code: 'FAST_INSTANT_TRADE_PAY'
-            }
-          },
-          {
-            notifyUrl: ALIPAY_CONFIG.notifyUrl,
-            returnUrl: ALIPAY_CONFIG.returnUrl
-          }
-        );
-        orderStr = result;
-        console.log(`[支付宝] SDK生成订单成功: ${orderId}`);
-      } catch (sdkError) {
-        console.error('[支付宝] SDK调用失败:', sdkError.message);
-        // 如果SDK失败，回退到模拟模式        orderStr = 'demo_order_str_' + orderId;
-      }
-    } else {
-      // SDK未初始化，使用模拟模式      orderStr = 'demo_order_str_' + orderId;
-      console.log(`[支付宝] SDK未初始化，使用模拟模式 ${orderId}`);
+    const code = db.inviteCodes.get(inviteCode.toUpperCase());
+    
+    if (!code) {
+      return res.json({
+        success: false,
+        error: { message: '邀请码不存在' }
+      });
     }
 
-    console.log(`支付宝订单创建: ${orderId}, 金额: ${amount}`);
+    if (!code.isActive) {
+      return res.json({
+        success: false,
+        error: { message: '邀请码已失效' }
+      });
+    }
+
+    if (code.usedCount >= code.maxUses) {
+      return res.json({
+        success: false,
+        error: { message: '邀请码已达使用上限' }
+      });
+    }
 
     res.json({
       success: true,
-      orderId,
-      payParams: {
-        orderStr: orderStr
+      data: {
+        valid: true,
+        inviteCode: code.code,
+        discountAmount: code.discountAmount,
+        skipPayment: code.skipPayment || false,
+        type: code.type || 'public'
       }
     });
   } catch (error) {
-    console.error('创建支付宝订单失败', error);
-    res.status(500).json({ success: false, message: '创建订单失败' });
+    console.error('[邀请码] 验证失败:', error);
+    res.json({
+      success: false,
+      error: { message: '验证失败，请重试' }
+    });
   }
 });
 
-// 支付宝授权回调（同步返回）
-app.get('/alipay-return', (req, res) => {
+// ==================== 支付API ====================
+
+// 创建支付订单
+app.post('/api/payment/create', async (req, res) => {
   try {
-    const { out_trade_no, trade_no, trade_status } = req.query;
+    const { phone, inviteCode, productType, channel } = req.body;
+    
+    console.log('[支付] 创建订单:', { phone, inviteCode, productType, channel });
 
-    console.log(`支付宝同步回调: ${out_trade_no}, 状态: ${trade_status}`);
+    if (!phone) {
+      return res.json({
+        success: false,
+        error: { message: '手机号不能为空' }
+      });
+    }
 
-    // 跳转到前端支付结果页面
-    const success = trade_status === 'TRADE_SUCCESS' || trade_status === 'TRADE_FINISHED';
-    const redirectUrl = `/payment-result?orderId=${out_trade_no}&status=${success ? 'success' : 'failed'}`;
+    // 计算价格
+    const ORIGINAL_PRICE = 1290; // 12.9元 = 1290分
+    let finalAmount = ORIGINAL_PRICE;
+    let discountAmount = 0;
+    let usedInviteCode = null;
 
-    res.redirect(redirectUrl);
-  } catch (error) {
-    console.error('支付宝同步回调处理失败:', error);
-    res.redirect('/payment-result?status=failed');
-  }
-});
+    // 验证邀请码
+    if (inviteCode) {
+      const code = db.inviteCodes.get(inviteCode.toUpperCase());
+      if (code && code.isActive && code.usedCount < code.maxUses) {
+        discountAmount = code.discountAmount;
+        finalAmount = ORIGINAL_PRICE - discountAmount;
+        usedInviteCode = code.code;
+      }
+    }
 
-// 支付宝异步通知app.post('/alipay-notify', (req, res) => {
-  try {
-    const { out_trade_no, trade_no, trade_status } = req.body;
+    // 生成订单号
+    const orderId = 'BP' + Date.now() + Math.floor(Math.random() * 1000);
+    
+    // 保存订单
+    db.orders.set(orderId, {
+      orderId: orderId,
+      phone: phone,
+      originalAmount: ORIGINAL_PRICE,
+      discountAmount: discountAmount,
+      finalAmount: finalAmount,
+      inviteCode: usedInviteCode,
+      productType: productType || 'entry_access',
+      channel: channel || 'alipay',
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    });
 
-    console.log(`支付宝回 ${out_trade_no}, 状 ${trade_status}`);
-
-    if (trade_status === 'TRADE_SUCCESS' || trade_status === 'TRADE_FINISHED') {
-      const order = db.orders.get(out_trade_no);
-      if (order) {
-        order.status = 'success';
-        order.transactionId = trade_no;
-        order.paidAt = Date.now();
-        db.orders.set(out_trade_no, order);
-
-        if (order.userId) {
-          const user = db.users.get(order.userId);
-          if (user) {
-            user.hasPaid = true;
-            user.paymentTime = Date.now();
-            user.orderId = out_trade_no;
-            db.users.set(order.userId, user);
+    // 使用支付宝SDK创建订单
+    let payParams = {};
+    if (alipaySdk && channel === 'alipay') {
+      try {
+        const orderStr = alipaySdk.sdkExec('alipay.trade.app.pay', {
+          notifyUrl: ALIPAY_CONFIG.notifyUrl,
+          bizContent: {
+            out_trade_no: orderId,
+            total_amount: (finalAmount / 100).toFixed(2),
+            subject: '布鲁计划会员',
+            product_code: 'QUICK_MSECURITY_PAY',
+            timeout_express: '30m'
           }
+        });
+        payParams = { orderStr };
+      } catch (sdkError) {
+        console.error('[支付宝] SDK调用失败:', sdkError.message);
+        payParams = { orderStr: 'demo_' + orderId };
+      }
+    } else {
+      payParams = { orderStr: 'demo_' + orderId };
+    }
+
+    res.json({
+      success: true,
+      data: {
+        orderId: orderId,
+        amount: finalAmount,
+        originalAmount: ORIGINAL_PRICE,
+        discountAmount: discountAmount,
+        payParams: payParams
+      }
+    });
+  } catch (error) {
+    console.error('[支付] 创建订单失败:', error);
+    res.json({
+      success: false,
+      error: { message: '创建订单失败: ' + error.message }
+    });
+  }
+});
+
+// ==================== 登录API ====================
+
+// 登录/注册
+app.post('/api/auth/login', (req, res) => {
+  try {
+    const { phone, code } = req.body;
+    
+    // 模拟验证码验证
+    if (code !== '123456' && code !== '000000') {
+      console.log('[登录] 开发模式：跳过验证码验证');
+    }
+
+    // 查找或创建用户
+    let user = db.users.get(phone);
+    if (!user) {
+      user = {
+        id: 'U' + Date.now(),
+        phone: phone,
+        nickname: '战士',
+        inviteCode: generateInviteCode(),
+        rewardBalance: 0,
+        totalReward: 0,
+        createdAt: new Date().toISOString()
+      };
+      db.users.set(phone, user);
+      console.log('[登录] 新用户注册:', phone);
+    }
+
+    // 生成token
+    const token = 'token_' + Date.now() + '_' + Math.random().toString(36).substr(2);
+
+    res.json({
+      success: true,
+      data: {
+        token: token,
+        user: {
+          id: user.id,
+          phone: user.phone,
+          nickname: user.nickname,
+          inviteCode: user.inviteCode
+        }
+      }
+    });
+  } catch (error) {
+    console.error('[登录] 失败:', error);
+    res.json({
+      success: false,
+      error: { message: '登录失败' }
+    });
+  }
+});
+
+// 生成邀请码
+function generateInviteCode() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+// ==================== 邀请关系API ====================
+
+// 绑定邀请关系
+app.post('/api/invite/bind', (req, res) => {
+  try {
+    const { orderId } = req.body;
+    
+    const order = db.orders.get(orderId);
+    if (!order) {
+      return res.json({
+        success: false,
+        error: { message: '订单不存在' }
+      });
+    }
+
+    if (!order.inviteCode) {
+      return res.json({
+        success: true,
+        data: { message: '无邀请码，跳过绑定' }
+      });
+    }
+
+    // 查找邀请人
+    let inviter = null;
+    for (const user of db.users.values()) {
+      if (user.inviteCode === order.inviteCode) {
+        inviter = user;
+        break;
+      }
+    }
+
+    if (!inviter) {
+      return res.json({
+        success: false,
+        error: { message: '邀请人不存在' }
+      });
+    }
+
+    // 检查是否已存在邀请关系
+    for (const relation of db.inviteRelations.values()) {
+      if (relation.inviteePhone === order.phone) {
+        return res.json({
+          success: true,
+          data: { message: '邀请关系已存在' }
+        });
+      }
+    }
+
+    // 创建邀请关系
+    const relationId = 'R' + Date.now();
+    db.inviteRelations.set(relationId, {
+      id: relationId,
+      inviterId: inviter.id,
+      inviterPhone: inviter.phone,
+      inviteePhone: order.phone,
+      orderId: orderId,
+      status: 'pending_activation',
+      rewardAmount: 500, // 5元 = 500分
+      createdAt: new Date().toISOString()
+    });
+
+    console.log('[邀请] 绑定成功:', relationId, inviter.phone, '->', order.phone);
+
+    res.json({
+      success: true,
+      data: { message: '邀请关系已建立', relationId }
+    });
+  } catch (error) {
+    console.error('[邀请] 绑定失败:', error);
+    res.json({
+      success: false,
+      error: { message: '绑定失败' }
+    });
+  }
+});
+
+// 首次激活奖励结算
+app.post('/api/invite/activate', (req, res) => {
+  try {
+    const { phone } = req.body;
+    
+    if (!phone) {
+      return res.json({
+        success: false,
+        error: { message: '手机号不能为空' }
+      });
+    }
+
+    let activatedCount = 0;
+    for (const relation of db.inviteRelations.values()) {
+      if (relation.inviteePhone === phone && relation.status === 'pending_activation') {
+        relation.status = 'activated';
+        relation.activatedAt = new Date().toISOString();
+        
+        const inviter = db.users.get(relation.inviterPhone);
+        if (inviter) {
+          inviter.rewardBalance = (inviter.rewardBalance || 0) + relation.rewardAmount;
+          inviter.totalReward = (inviter.totalReward || 0) + relation.rewardAmount;
+          
+          const rewardId = 'RW' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+          db.rewards.set(rewardId, {
+            id: rewardId,
+            userPhone: inviter.phone,
+            type: 'invite',
+            amount: relation.rewardAmount,
+            source: relation.inviteePhone,
+            description: '邀请好友奖励',
+            createdAt: new Date().toISOString()
+          });
+          
+          console.log('[邀请] 奖励发放:', inviter.phone, '+', relation.rewardAmount, '分');
+          activatedCount++;
         }
       }
     }
 
-    res.json({ success: true });
+    res.json({
+      success: true,
+      data: { 
+        message: '激活奖励已记录',
+        activatedCount
+      }
+    });
   } catch (error) {
-    console.error('支付宝回调处理失败', error);
-    res.status(500).json({ success: false });
+    console.error('[邀请] 激活失败:', error);
+    res.json({
+      success: false,
+      error: { message: '激活失败' }
+    });
   }
 });
 
-// 查询支付宝订单 app.post('/alipay/query-order', (req, res) => {
+// ==================== 收益API ====================
+
+// 获取收益概览
+app.get('/api/invite/summary', (req, res) => {
   try {
-    const { orderId } = req.body;
-
-    const order = db.orders.get(orderId);
-
-    if (!order) {
-      return res.status(404).json({ success: false, message: '订单不存在 });
+    const { phone } = req.query;
+    
+    if (!phone) {
+      return res.json({
+        success: false,
+        error: { message: '手机号不能为空' }
+      });
     }
+
+    const user = db.users.get(phone);
+    if (!user) {
+      return res.json({
+        success: false,
+        error: { message: '用户不存在' }
+      });
+    }
+
+    let inviteCount = 0;
+    let activatedCount = 0;
+    for (const relation of db.inviteRelations.values()) {
+      if (relation.inviterPhone === phone) {
+        inviteCount++;
+        if (relation.status === 'activated') {
+          activatedCount++;
+        }
+      }
+    }
+
+    const rewardBalance = user.rewardBalance || 0;
+    const withdrawableAmount = rewardBalance >= 1000 ? rewardBalance : 0;
 
     res.json({
       success: true,
-      status: order.status,
-      order
+      data: {
+        inviteCode: user.inviteCode,
+        inviteCount: inviteCount,
+        activatedCount: activatedCount,
+        rewardBalance: rewardBalance,
+        totalReward: user.totalReward || 0,
+        withdrawableAmount: withdrawableAmount,
+        minWithdrawAmount: 1000
+      }
     });
   } catch (error) {
-    console.error('查询订单失败:', error);
-    res.status(500).json({ success: false, message: '查询失败' });
+    console.error('[收益] 获取失败:', error);
+    res.json({
+      success: false,
+      error: { message: '获取失败' }
+    });
   }
 });
 
-// ==================== 启动服务====================
+// 获取奖励流水
+app.get('/api/invite/reward-ledger', (req, res) => {
+  try {
+    const { phone } = req.query;
+    
+    if (!phone) {
+      return res.json({
+        success: false,
+        error: { message: '手机号不能为空' }
+      });
+    }
 
-// 初始化数据库
-initDatabase().then(() => {
-  console.log('[数据库] 初始化完成);
+    const list = [];
+    for (const reward of db.rewards.values()) {
+      if (reward.userPhone === phone) {
+        list.push({
+          id: reward.id,
+          type: reward.type,
+          amount: reward.amount,
+          description: reward.description,
+          source: reward.source,
+          createdAt: reward.createdAt
+        });
+      }
+    }
+
+    list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.json({
+      success: true,
+      data: {
+        list: list,
+        total: list.length
+      }
+    });
+  } catch (error) {
+    console.error('[收益] 获取流水失败:', error);
+    res.json({
+      success: false,
+      error: { message: '获取失败' }
+    });
+  }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log('=====================================');
-  console.log('  布鲁计划后端API服务已启动);
-  console.log('=====================================');
-  console.log(`  服务器地址: http://0.0.0.0:${PORT}`);
-  console.log(`  您的域名:   http://blue-plan1.cn:${PORT}`);
-  console.log(`  IP访问:     http://120.27.139.123:${PORT}`);
-  console.log('=====================================');
-  console.log('');
-  console.log('API接口列表:');
-  console.log('  短信验证码 POST /send-sms-code');
-  console.log('  验证验证码 POST /verify-sms-code');
-  console.log('  用户创建:   POST /api/users/create');
-  console.log('  用户更新:   POST /api/users/update');
-  console.log('  用户获取:   POST /api/users/get');
-  console.log('  数据同步:   POST /api/users/sync');
-  console.log('  微信订单:   POST /create-order');
-  console.log('  支付宝订 POST /alipay/create-order');
-  console.log('=====================================');
-  console.log('');
-  console.log('⚠️ 阿里云短信配');
-  console.log(`  模板CODE: ${ALIYUN_SMS_CONFIG.templateCode}`);
-  console.log(`  签名: ${ALIYUN_SMS_CONFIG.signName}`);
-  console.log('  AccessKeySecret: ' + (ALIYUN_SMS_CONFIG.accessKeySecret === 'YOUR_ACCESS_KEY_SECRET' ? '未配置(模拟模式)' : '已配置));
-  console.log('=====================================');
+// ==================== 提现API ====================
+
+// 申请提现
+app.post('/api/withdraw/apply', (req, res) => {
+  try {
+    const { phone, amount, channel, account, accountName } = req.body;
+    
+    if (!phone || !amount || !channel || !account) {
+      return res.json({
+        success: false,
+        error: { message: '参数不完整' }
+      });
+    }
+
+    const user = db.users.get(phone);
+    if (!user) {
+      return res.json({
+        success: false,
+        error: { message: '用户不存在' }
+      });
+    }
+
+    if ((user.rewardBalance || 0) < amount) {
+      return res.json({
+        success: false,
+        error: { message: '余额不足' }
+      });
+    }
+
+    if (amount < 1000) {
+      return res.json({
+        success: false,
+        error: { message: '最小提现金额为10元' }
+      });
+    }
+
+    user.rewardBalance -= amount;
+
+    const withdrawId = 'W' + Date.now();
+    db.withdrawals.set(withdrawId, {
+      id: withdrawId,
+      userPhone: phone,
+      amount: amount,
+      channel: channel,
+      account: account,
+      accountName: accountName,
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    });
+
+    console.log('[提现] 申请成功:', withdrawId, phone, amount);
+
+    res.json({
+      success: true,
+      data: { withdrawId: withdrawId }
+    });
+  } catch (error) {
+    console.error('[提现] 申请失败:', error);
+    res.json({
+      success: false,
+      error: { message: '申请失败' }
+    });
+  }
 });
 
+// 获取提现记录
+app.get('/api/withdraw/records', (req, res) => {
+  try {
+    const { phone } = req.query;
+    
+    if (!phone) {
+      return res.json({
+        success: false,
+        error: { message: '手机号不能为空' }
+      });
+    }
+
+    const list = [];
+    for (const record of db.withdrawals.values()) {
+      if (record.userPhone === phone) {
+        list.push({
+          id: record.id,
+          amount: record.amount,
+          channel: record.channel,
+          status: record.status,
+          createdAt: record.createdAt
+        });
+      }
+    }
+
+    list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.json({
+      success: true,
+      data: {
+        list: list,
+        total: list.length
+      }
+    });
+  } catch (error) {
+    console.error('[提现] 获取记录失败:', error);
+    res.json({
+      success: false,
+      error: { message: '获取失败' }
+    });
+  }
+});
+
+// ==================== 支付宝API ====================
+
+// 创建支付宝订单
+app.post('/alipay/create-order', async (req, res) => {
+  try {
+    console.log('[支付宝] 收到创建订单请求');
+    console.log('[支付宝] 请求体:', JSON.stringify(req.body));
+
+    const { amount = 9.9, subject = '布鲁计划会员', description, phone, inviteCode, productType, channel = 'alipay' } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ success: false, message: '金额不正确' });
+    }
+
+    const outTradeNo = 'ALI' + Date.now() + Math.floor(Math.random() * 1000);
+    const timestamp = new Date().toISOString();
+
+    db.orders.set(outTradeNo, {
+      orderId: outTradeNo,
+      phone: phone,
+      amount: amount,
+      inviteCode: inviteCode || null,
+      productType: productType || 'standard',
+      channel: channel,
+      status: 'pending',
+      createdAt: timestamp
+    });
+    console.log('[支付宝] 订单已保存:', outTradeNo);
+
+    let orderStr = '';
+
+    if (alipaySdk) {
+      try {
+        orderStr = alipaySdk.sdkExec('alipay.trade.app.pay', {
+          notifyUrl: ALIPAY_CONFIG.notifyUrl,
+          bizContent: {
+            out_trade_no: outTradeNo,
+            total_amount: String(amount),
+            subject: subject,
+            product_code: 'QUICK_MSECURITY_PAY',
+            timeout_express: '30m'
+          }
+        });
+        
+        console.log('[支付宝] SDK生成订单成功:', outTradeNo);
+      } catch (sdkError) {
+        console.error('[支付宝] SDK调用失败:', sdkError.message);
+        return res.status(500).json({
+          success: false,
+          message: '支付宝SDK调用失败: ' + sdkError.message
+        });
+      }
+    } else {
+      orderStr = 'demo_order_str_' + outTradeNo;
+      console.log('[支付宝] SDK未初始化，使用模拟模式:', outTradeNo);
+    }
+
+    console.log('[支付宝] 订单创建成功:', outTradeNo, '金额:', amount);
+
+    res.json({
+      success: true,
+      orderId: outTradeNo,
+      payParams: {
+        orderStr: orderStr
+      }
+    });
+
+  } catch (error) {
+    console.error('[支付宝] 创建订单失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '创建订单失败',
+      error: error.message
+    });
+  }
+});
+
+// 支付宝回调
+app.post('/alipay-notify', (req, res) => {
+  console.log('[支付宝] 支付回调:', JSON.stringify(req.body, null, 2));
+  console.log('[支付宝] 支付状态:', req.body.trade_status);
+
+  if (req.body.trade_status === 'TRADE_SUCCESS') {
+    console.log('[支付宝] 支付成功，处理业务逻辑');
+    const order = db.orders.get(req.body.out_trade_no);
+    if (order) {
+      order.status = 'paid';
+      order.paidAt = new Date().toISOString();
+    }
+  }
+
+  res.send('success');
+});
+
+// 支付返回页面
+app.get('/alipay-return', (req, res) => {
+  res.json({
+    status: 'return_success',
+    message: '支付完成，正在返回应用...',
+    timestamp: new Date().toISOString(),
+    query: req.query
+  });
+});
+
+// 基础路由
+app.get('/', (req, res) => {
+  res.json({
+    status: 'success',
+    message: '布鲁计划后端API',
+    version: '2.1.0',
+    features: ['alipay', 'invite_code', 'payment', 'withdraw'],
+    alipay: alipaySdk ? '已配置真实支付' : '模拟模式',
+    server_time: new Date().toISOString()
+  });
+});
+
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    alipay_app_id: ALIPAY_CONFIG.appId,
+    alipay_sdk: alipaySdk ? 'initialized' : 'not_initialized'
+  });
+});
+
+// 启动服务
+app.listen(port, '0.0.0.0', () => {
+  console.log(`布鲁计划后端运行在 http://0.0.0.0:${port}`);
+  console.log(`支付宝AppID: ${ALIPAY_CONFIG.appId}`);
+  console.log(`SDK状态: ${alipaySdk ? '已初始化' : '未初始化'}`);
+  console.log(`邀请码系统: 已启用`);
+});

@@ -1,174 +1,53 @@
----
-AIGC:
-    ContentProducer: Minimax Agent AI
-    ContentPropagator: Minimax Agent AI
-    Label: AIGC
-    ProduceID: "00000000000000000000000000000000"
-    PropagateID: "00000000000000000000000000000000"
-    ReservedCode1: 3045022038f911cbf5cff76d2c81fd67d8e604de1c71b537c5ba9551c86bfcad462a53e5022100f7c56d0175770bef85267a3e86dc11a9272288ce4a5cdf75013c64722dc77cc8
-    ReservedCode2: 304502205cce9d2604120d682a8678db5faf590291b0acb5eaca29a54c938e00efce5f50022100c1af8be33225ee90301ff218b4dc1af3e0b9b0c4c3616fe31b411f7439d30ff4
----
-
-# 布鲁计划后端部署指南
+# 后端部署说明
 
 ## 服务器信息
-- **IP:** 120.27.139.123
-- **域名:** blue-plan1.cn
+- **IP**: 120.27.139.123
+- **域名**: https://blue-plan1.cn
+- **部署路径**: /home/admin/blue-plan-backend
+- **端口**: 3000
+- **进程管理**: PM2
 
 ## 部署步骤
 
-### 1. 连接服务器
+### 1. 安装依赖
 ```bash
-ssh root@120.27.139.123
-```
-
-### 2. 安装 Node.js（如果未安装）
-```bash
-# 安装 Node.js 18.x
-curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-apt-get install -y nodejs
-
-# 验证安装
-node --version
-npm --version
-```
-
-### 3. 上传后端代码
-```bash
-# 在本地执行（需要先压缩）
-cd /workspace
-zip -r blue-plan-backend.zip blue-plan-backend/
-
-# 或使用 scp 上传
-scp blue-plan-backend.zip root@120.27.139.123:/root/
-```
-
-### 4. 在服务器上解压并安装
-```bash
-# 解压
-unzip blue-plan-backend.zip
-
-# 进入目录
-cd blue-plan-backend
-
-# 安装依赖
+cd /home/admin/blue-plan-backend
 npm install
 ```
 
-### 5. 启动服务
+### 2. 配置环境变量（可选）
 ```bash
-# 启动服务（前台运行测试）
-npm start
-
-# 或使用 PM2 后台运行（推荐）
-npm install -g pm2
-pm2 start server.js --name blue-plan
-
-# 查看状态
-pm2 status
+export ALIPAY_APP_ID=你的支付宝AppID
+export ALIPAY_PRIVATE_KEY=你的私钥
+export ALIPAY_PUBLIC_KEY=支付宝公钥
+export ALIPAY_NOTIFY_URL=https://blue-plan1.cn/alipay-notify
 ```
 
-### 6. 配置 Nginx（可选，用于域名访问）
-```nginx
-# /etc/nginx/sites-available/blue-plan
-
-server {
-    listen 80;
-    server_name blue-plan1.cn;
-
-    location / {
-        # 前端
-        proxy_pass http://localhost:8080;
-    }
-
-    location /api {
-        # 后端API
-        proxy_pass http://localhost:3000;
-    }
-}
-```
-
-### 7. 开放防火墙端口
+### 3. 启动服务
 ```bash
-# 开放端口
-ufw allow 3000
-ufw allow 80
-ufw allow 443
+# 使用PM2启动
+pm2 start server.js --name blue-plan-api
+
+# 或直接使用Node
+node server.js
 ```
 
----
-
-## API 接口列表
-
-### 邮箱验证码
-| 接口 | 方法 | 路径 |
-|------|------|------|
-| 发送验证码 | POST | /send-verification-code |
-| 验证验证码 | POST | /verify-code |
-
-### 用户管理
-| 接口 | 方法 | 路径 |
-|------|------|------|
-| 创建用户 | POST | /api/users/create |
-| 更新用户 | POST | /api/users/update |
-| 获取用户 | POST | /api/users/get |
-| 同步数据 | POST | /api/users/sync |
-
-### 微信支付
-| 接口 | 方法 | 路径 |
-|------|------|------|
-| 创建订单 | POST | /create-order |
-| 查询订单 | POST | /query-order |
-| 支付回调 | POST | /wechat-notify |
-
-### 支付宝
-| 接口 | 方法 | 路径 |
-|------|------|------|
-| 创建订单 | POST | /alipay/create-order |
-| 查询订单 | POST | /alipay/query-order |
-| 支付回调 | POST | /alipay-notify |
-
----
-
-## 前端配置
-
-部署后，在前端配置您的API地址：
-
-```javascript
-// /workspace/blue-plan/src/config/api.js
-
-const API_CONFIG = {
-  database: {
-    baseUrl: 'http://blue-plan1.cn:3000'
-  },
-  emailApi: {
-    baseUrl: 'http://blue-plan1.cn:3000'
-  },
-  wechatPay: {
-    baseUrl: 'http://blue-plan1.cn:3000'
-  },
-  alipay: {
-    baseUrl: 'http://blue-plan1.cn:3000'
-  }
-}
+### 4. 查看日志
+```bash
+pm2 logs blue-plan-api
 ```
 
----
+### 5. 重启服务
+```bash
+pm2 restart blue-plan-api
+```
 
-## 后续配置
+## API文档
 
-### 1. 配置微信支付
-- 申请微信支付商户号
-- 在 `/create-order` 中填入真实AppID和商户密钥
+详见项目根目录的 PROJECT_REPORT.md
 
-### 2. 配置支付宝
-- 在支付宝开放平台创建应用
-- 在 `/alipay/create-order` 中填入真实AppID和密钥
+## 注意事项
 
-### 3. 配置邮箱发送
-- 申请阿里云邮件推送
-- 在 `/send-verification-code` 中配置SMTP
-
-### 4. 替换数据库
-- 当前使用内存存储（重启会丢失）
-- 建议配置 MySQL/SQLite 持久化存储
+1. 当前使用内存数据库，重启后数据会丢失
+2. 生产环境建议迁移到 MongoDB 或 MySQL
+3. 支付宝配置需要替换为真实密钥
