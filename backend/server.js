@@ -2,12 +2,11 @@ const express = require('express');
 const app = express();
 const port = 3000;
 
-// CORS 中间件 - 允许所有来源
+// CORS 中间件
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  
   if (req.method === 'OPTIONS') {
     res.sendStatus(200);
   } else {
@@ -28,7 +27,70 @@ const db = {
   withdrawals: new Map()
 };
 
-// 初始化邀请码
+// ==================== 邀请码系统配置 ====================
+const SAFE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // 排除 0, O, 1, I, L
+const INVITE_CODE_LENGTH = 12;
+const ORIGINAL_PRICE = 1290; // 12.9元 = 1290分
+const FIRST_ORDER_DISCOUNT = 200; // 首单优惠2元 = 200分
+
+// 生成安全的邀请码
+function generateInviteCode() {
+  let code = '';
+  for (let i = 0; i < INVITE_CODE_LENGTH; i++) {
+    code += SAFE_CHARS.charAt(Math.floor(Math.random() * SAFE_CHARS.length));
+  }
+  return code;
+}
+
+// 确保邀请码唯一
+function generateUniqueInviteCode() {
+  let code;
+  let attempts = 0;
+  do {
+    code = generateInviteCode();
+    attempts++;
+    let exists = false;
+    for (const user of db.users.values()) {
+      if (user.inviteCode === code) {
+        exists = true;
+        break;
+      }
+    }
+    if (!exists) {
+      for (const codeData of db.inviteCodes.values()) {
+        if (codeData.code === code) {
+          exists = true;
+          break;
+        }
+      }
+    }
+    if (!exists) return code;
+  } while (attempts < 10);
+  return code + Date.now().toString(36).toUpperCase().slice(-4);
+}
+
+// 计算返现金额
+function calculateRewardAmount(inviteCount) {
+  if (inviteCount === 0) return 300;  // 第1个：3元
+  if (inviteCount === 1) return 400;  // 第2个：4元
+  if (inviteCount === 2) return 500;  // 第3个：5元
+  return 400;                          // 第4个及以后：4元
+}
+
+// 检查是否自己邀请自己
+function isSelfInvite(inviterPhone, inviteePhone) {
+  return inviterPhone === inviteePhone;
+}
+
+// 检查同设备
+function isSameDevice(user1Phone, user2Phone) {
+  const user1 = db.users.get(user1Phone);
+  const user2 = db.users.get(user2Phone);
+  if (!user1 || !user2) return false;
+  return user1.deviceId && user2.deviceId && user1.deviceId === user2.deviceId;
+}
+
+// 初始化系统邀请码
 function initTestData() {
   const publicCodes = [
     { code: 'BLUE2024', maxUses: 1000 },
@@ -40,30 +102,28 @@ function initTestData() {
   publicCodes.forEach(({ code, maxUses }) => {
     db.inviteCodes.set(code, {
       code: code,
-      createdBy: 'system',
+      type: 'public',
       maxUses: maxUses,
       usedCount: 0,
-      discountAmount: 200,
+      discountAmount: FIRST_ORDER_DISCOUNT,
       isActive: true,
-      type: 'public',
       createdAt: new Date().toISOString()
     });
   });
   
+  // 内部专属码（全额减免）
   db.inviteCodes.set('YAOLUJIE2024', {
     code: 'YAOLUJIE2024',
-    createdBy: 'admin',
+    type: 'internal',
     maxUses: 9999,
     usedCount: 0,
-    discountAmount: 1290,
+    discountAmount: ORIGINAL_PRICE,
     isActive: true,
-    type: 'internal',
     skipPayment: true,
     createdAt: new Date().toISOString()
   });
   
   console.log('[数据库] 公开邀请码已初始化:', publicCodes.map(c => c.code));
-  console.log('[数据库] 内部专属验证码已初始化: YAOLUJIE2024');
 }
 
 initTestData();
@@ -90,7 +150,6 @@ const ALIPAY_CONFIG = {
   returnUrl: process.env.ALIPAY_RETURN_URL || 'https://blue-plan1.cn/alipay-return'
 };
 
-// ==================== 支付宝SDK初始化 ====================
 let alipaySdk = null;
 try {
   const { AlipaySdk } = require('alipay-sdk');
@@ -106,67 +165,36 @@ try {
   console.error('[支付宝] SDK初始化失败:', error.message);
 }
 
-// ==================== 邀请码API ====================
-app.post('/api/invite/validate', (req, res) => {
-  try {
-    const { inviteCode } = req.body;
-    
-    if (!inviteCode || inviteCode.length < 4) {
-      return res.json({ success: false, error: { message: '邀请码格式不正确' } });
-    }
-
-    const code = db.inviteCodes.get(inviteCode.toUpperCase());
-    
-    if (!code) {
-      return res.json({ success: false, error: { message: '邀请码不存在' } });
-    }
-
-    if (!code.isActive) {
-      return res.json({ success: false, error: { message: '邀请码已失效' } });
-    }
-
-    if (code.usedCount >= code.maxUses) {
-      return res.json({ success: false, error: { message: '邀请码已达使用上限' } });
-    }
-
-    res.json({
-      success: true,
-      data: {
-        valid: true,
-        inviteCode: code.code,
-        discountAmount: code.discountAmount,
-        skipPayment: code.skipPayment || false,
-        type: code.type || 'public'
-      }
-    });
-  } catch (error) {
-    console.error('[邀请码] 验证失败:', error);
-    res.json({ success: false, error: { message: '验证失败，请重试' } });
-  }
-});
-
 // ==================== 登录API ====================
 app.post('/api/auth/login', (req, res) => {
   try {
-    const { phone, code } = req.body;
+    const { phone, code, deviceId } = req.body;
     
-    if (code !== '123456' && code !== '000000') {
-      console.log('[登录] 开发模式：跳过验证码验证');
+    if (!phone) {
+      return res.json({ success: false, error: { message: '手机号不能为空' } });
     }
 
     let user = db.users.get(phone);
     if (!user) {
+      // 新用户注册，生成固定邀请码
       user = {
         id: 'U' + Date.now(),
         phone: phone,
         nickname: '战士',
-        inviteCode: generateInviteCode(),
+        inviteCode: generateUniqueInviteCode(),
+        inviteCodeUsed: false,
+        invitedBy: null,
         rewardBalance: 0,
         totalReward: 0,
+        inviteCount: 0,
+        deviceId: deviceId || null,
         createdAt: new Date().toISOString()
       };
       db.users.set(phone, user);
-      console.log('[登录] 新用户注册:', phone);
+      console.log('[登录] 新用户注册:', phone, '邀请码:', user.inviteCode);
+    } else if (deviceId && !user.deviceId) {
+      // 更新设备ID
+      user.deviceId = deviceId;
     }
 
     const token = 'token_' + Date.now() + '_' + Math.random().toString(36).substr(2);
@@ -179,7 +207,8 @@ app.post('/api/auth/login', (req, res) => {
           id: user.id,
           phone: user.phone,
           nickname: user.nickname,
-          inviteCode: user.inviteCode
+          inviteCode: user.inviteCode,
+          rewardBalance: user.rewardBalance
         }
       }
     });
@@ -189,73 +218,180 @@ app.post('/api/auth/login', (req, res) => {
   }
 });
 
-function generateInviteCode() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code = '';
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
+// ==================== 邀请码验证API ====================
+app.post('/api/invite/validate', (req, res) => {
+  try {
+    const { inviteCode, phone, deviceId } = req.body;
+    
+    if (!inviteCode || inviteCode.length < 4) {
+      return res.json({ success: false, error: { message: '邀请码格式不正确' } });
+    }
+
+    // 检查用户是否已使用过邀请码
+    const user = db.users.get(phone);
+    if (user && user.inviteCodeUsed) {
+      return res.json({ success: false, error: { message: '您已使用过邀请码，每个用户仅限一次' } });
+    }
+
+    // 1. 检查是否是系统预设码
+    const sysCode = db.inviteCodes.get(inviteCode.toUpperCase());
+    if (sysCode && sysCode.isActive) {
+      if (sysCode.usedCount >= sysCode.maxUses) {
+        return res.json({ success: false, error: { message: '邀请码已达使用上限' } });
+      }
+
+      return res.json({
+        success: true,
+        data: {
+          valid: true,
+          inviteCode: sysCode.code,
+          discountAmount: sysCode.discountAmount,
+          finalAmount: ORIGINAL_PRICE - sysCode.discountAmount,
+          type: sysCode.type,
+          skipPayment: sysCode.skipPayment || false
+        }
+      });
+    }
+
+    // 2. 检查是否是用户邀请码
+    let inviter = null;
+    for (const u of db.users.values()) {
+      if (u.inviteCode === inviteCode.toUpperCase()) {
+        inviter = u;
+        break;
+      }
+    }
+
+    if (!inviter) {
+      return res.json({ success: false, error: { message: '邀请码不存在' } });
+    }
+
+    // 检查是否自己邀请自己
+    if (isSelfInvite(inviter.phone, phone)) {
+      return res.json({ success: false, error: { message: '不能使用自己的邀请码' } });
+    }
+
+    // 检查同设备
+    if (deviceId && inviter.deviceId === deviceId) {
+      return res.json({ success: false, error: { message: '检测到异常设备，请更换设备重试' } });
+    }
+
+    // 返回验证结果
+    res.json({
+      success: true,
+      data: {
+        valid: true,
+        inviteCode: inviter.inviteCode,
+        discountAmount: FIRST_ORDER_DISCOUNT,
+        finalAmount: ORIGINAL_PRICE - FIRST_ORDER_DISCOUNT,
+        type: 'user',
+        inviterPhone: inviter.phone
+      }
+    });
+  } catch (error) {
+    console.error('[邀请码] 验证失败:', error);
+    res.json({ success: false, error: { message: '验证失败，请重试' } });
   }
-  return code;
-}
+});
 
 // ==================== 支付宝支付API ====================
 
 // 创建订单
 app.post('/alipay/create-order', async (req, res) => {
   try {
-    console.log('[支付宝] 收到创建订单请求');
-    console.log('[支付宝] 请求体:', JSON.stringify(req.body));
+    const { phone, inviteCode, productType, channel, deviceId } = req.body;
 
-    const { amount = 9.9, subject = '布鲁计划会员', phone, inviteCode, productType, channel = 'alipay' } = req.body;
+    if (!phone) {
+      return res.status(400).json({ success: false, message: '手机号不能为空' });
+    }
 
-    if (!amount || amount <= 0) {
-      return res.status(400).json({ success: false, message: '金额不正确' });
+    const user = db.users.get(phone);
+    if (!user) {
+      return res.status(400).json({ success: false, message: '用户不存在，请先登录' });
+    }
+
+    // 计算价格
+    let finalAmount = ORIGINAL_PRICE;
+    let discountAmount = 0;
+    let usedInviteCode = null;
+    let inviterPhone = null;
+
+    // 验证邀请码
+    if (inviteCode && !user.inviteCodeUsed) {
+      // 系统预设码
+      const sysCode = db.inviteCodes.get(inviteCode.toUpperCase());
+      if (sysCode && sysCode.isActive && sysCode.usedCount < sysCode.maxUses) {
+        discountAmount = sysCode.discountAmount;
+        finalAmount = ORIGINAL_PRICE - discountAmount;
+        usedInviteCode = sysCode.code;
+      } else {
+        // 用户邀请码
+        for (const u of db.users.values()) {
+          if (u.inviteCode === inviteCode.toUpperCase()) {
+            if (!isSelfInvite(u.phone, phone) && u.deviceId !== deviceId) {
+              discountAmount = FIRST_ORDER_DISCOUNT;
+              finalAmount = ORIGINAL_PRICE - discountAmount;
+              usedInviteCode = u.inviteCode;
+              inviterPhone = u.phone;
+            }
+            break;
+          }
+        }
+      }
     }
 
     const outTradeNo = 'ALI' + Date.now() + Math.floor(Math.random() * 1000);
     const timestamp = new Date().toISOString();
 
+    // 保存订单
     db.orders.set(outTradeNo, {
       orderId: outTradeNo,
       phone: phone,
-      amount: amount,
-      inviteCode: inviteCode || null,
+      originalAmount: ORIGINAL_PRICE,
+      discountAmount: discountAmount,
+      finalAmount: finalAmount,
+      amount: finalAmount / 100, // 元为单位
+      inviteCode: usedInviteCode,
+      inviterPhone: inviterPhone,
+      inviteCodeSettled: false,
+      rewardSettled: false,
+      rewardAmount: 0,
       productType: productType || 'standard',
-      channel: channel,
+      channel: channel || 'alipay',
       status: 'pending',
+      deviceId: deviceId || user.deviceId,
       createdAt: timestamp
     });
-    console.log('[支付宝] 订单已保存:', outTradeNo);
 
+    console.log('[支付宝] 订单创建:', outTradeNo, '金额:', finalAmount, '邀请码:', usedInviteCode);
+
+    // 生成支付参数
     let orderStr = '';
-
     if (alipaySdk) {
       try {
         orderStr = alipaySdk.sdkExec('alipay.trade.app.pay', {
           notifyUrl: ALIPAY_CONFIG.notifyUrl,
           bizContent: {
             out_trade_no: outTradeNo,
-            total_amount: String(amount),
-            subject: subject,
+            total_amount: (finalAmount / 100).toFixed(2),
+            subject: '布鲁计划会员',
             product_code: 'QUICK_MSECURITY_PAY',
             timeout_express: '30m'
           }
         });
-        console.log('[支付宝] SDK生成订单成功:', outTradeNo);
       } catch (sdkError) {
         console.error('[支付宝] SDK调用失败:', sdkError.message);
-        return res.status(500).json({ success: false, message: '支付宝SDK调用失败: ' + sdkError.message });
+        orderStr = 'demo_' + outTradeNo;
       }
     } else {
-      orderStr = 'demo_order_str_' + outTradeNo;
-      console.log('[支付宝] SDK未初始化，使用模拟模式:', outTradeNo);
+      orderStr = 'demo_' + outTradeNo;
     }
-
-    console.log('[支付宝] 订单创建成功:', outTradeNo, '金额:', amount);
 
     res.json({
       success: true,
       orderId: outTradeNo,
+      amount: finalAmount / 100,
+      discountAmount: discountAmount / 100,
       payParams: { orderStr: orderStr }
     });
 
@@ -265,7 +401,7 @@ app.post('/alipay/create-order', async (req, res) => {
   }
 });
 
-// 查询订单状态 - 与前端 payment.js 对接
+// 查询订单状态
 app.get('/alipay/query-order', async (req, res) => {
   try {
     const { orderId } = req.query;
@@ -274,10 +410,7 @@ app.get('/alipay/query-order', async (req, res) => {
       return res.json({ success: false, error: { message: '订单ID不能为空' } });
     }
 
-    console.log('[支付宝] 查询订单:', orderId);
-
     const order = db.orders.get(orderId);
-    
     if (!order) {
       return res.json({ success: false, error: { message: '订单不存在' } });
     }
@@ -294,24 +427,20 @@ app.get('/alipay/query-order', async (req, res) => {
     };
 
     // 终态直接返回
-    if (order.status === 'paid' || order.status === 'cancelled' || order.status === 'closed') {
+    if (['paid', 'cancelled', 'closed'].includes(order.status)) {
       responseData.paidAt = order.paidAt;
       responseData.canRetry = order.status !== 'paid';
       return res.json({ success: true, data: responseData });
     }
 
-    // 查询支付宝真实状态
-    if (alipaySdk && (order.status === 'pending' || order.status === 'paying')) {
+    // 查询支付宝状态
+    if (alipaySdk && ['pending', 'paying'].includes(order.status)) {
       try {
         const result = await alipaySdk.exec('alipay.trade.query', {
           out_trade_no: orderId
         });
 
-        console.log('[支付宝] 查单结果:', JSON.stringify(result));
-
         const tradeStatus = result.trade_status;
-        
-        // 映射支付宝状态到前端状态机
         const statusMap = {
           'WAIT_BUYER_PAY': 'pending',
           'TRADE_CLOSED': 'closed',
@@ -329,48 +458,31 @@ app.get('/alipay/query-order', async (req, res) => {
             order.paidAt = new Date().toISOString();
             order.tradeNo = result.trade_no;
             
-            if (order.inviteCode) {
-              const code = db.inviteCodes.get(order.inviteCode);
-              if (code && !code._usedByOrder?.includes(orderId)) {
-                code.usedCount = (code.usedCount || 0) + 1;
-                code._usedByOrder = code._usedByOrder || [];
-                code._usedByOrder.push(orderId);
-              }
-            }
+            // 支付成功后处理邀请码和返现
+            await processOrderPaid(order);
           }
         }
 
         responseData.status = mappedStatus;
         responseData.paidAt = order.paidAt;
-        responseData.tradeNo = order.tradeNo;
-        responseData.alipayStatus = tradeStatus;
         
       } catch (sdkError) {
         console.error('[支付宝] SDK查单失败:', sdkError.message);
-        responseData.queryError = '支付宝查询失败，返回本地状态';
       }
     }
 
-    // 判断是否可重试
     responseData.canRetry = ['pending', 'paying', 'failed'].includes(responseData.status);
 
-    // 检查订单超时（30分钟）
-    if (responseData.status === 'pending' || responseData.status === 'paying') {
+    // 检查超时
+    if (['pending', 'paying'].includes(responseData.status)) {
       const createdTime = new Date(order.createdAt).getTime();
-      const now = Date.now();
-      const timeoutMs = 30 * 60 * 1000;
-      
-      if (now - createdTime > timeoutMs) {
+      if (Date.now() - createdTime > 30 * 60 * 1000) {
         order.status = 'closed';
         order.closedAt = new Date().toISOString();
-        order.closeReason = 'timeout';
         responseData.status = 'closed';
         responseData.canRetry = true;
-        responseData.closedReason = '订单已超时（30分钟）';
       }
     }
-
-    console.log('[支付宝] 查单响应:', { orderId, status: responseData.status, canRetry: responseData.canRetry });
 
     res.json({ success: true, data: responseData });
 
@@ -380,124 +492,117 @@ app.get('/alipay/query-order', async (req, res) => {
   }
 });
 
+// 支付成功后处理邀请码和返现
+async function processOrderPaid(order) {
+  try {
+    console.log('[订单] 处理支付成功:', order.orderId);
+    
+    const user = db.users.get(order.phone);
+    if (!user) return;
+
+    // 1. 处理首单优惠标记
+    if (order.inviteCode && !order.inviteCodeSettled) {
+      user.inviteCodeUsed = true;
+      user.invitedBy = order.inviterPhone;
+      order.inviteCodeSettled = true;
+      
+      // 增加系统码使用次数
+      const sysCode = db.inviteCodes.get(order.inviteCode);
+      if (sysCode) {
+        sysCode.usedCount++;
+      }
+      
+      console.log('[邀请码] 首单优惠已结算:', order.phone, '使用:', order.inviteCode);
+    }
+
+    // 2. 处理邀请人返现（幂等）
+    if (order.inviterPhone && !order.rewardSettled) {
+      const inviter = db.users.get(order.inviterPhone);
+      if (inviter && !isSelfInvite(inviter.phone, order.phone)) {
+        // 检查是否同设备
+        if (order.deviceId && inviter.deviceId === order.deviceId) {
+          console.log('[返现] 同设备，跳过:', order.phone);
+          order.rewardSettled = true;
+          order.rewardAmount = 0;
+          return;
+        }
+
+        // 检查是否已结算过
+        let relation = null;
+        for (const r of db.inviteRelations.values()) {
+          if (r.inviteePhone === order.phone && r.inviterPhone === order.inviterPhone) {
+            relation = r;
+            break;
+          }
+        }
+
+        if (!relation) {
+          // 创建邀请关系
+          const rewardAmount = calculateRewardAmount(inviter.inviteCount);
+          const relationId = 'R' + Date.now();
+          
+          relation = {
+            id: relationId,
+            inviterPhone: order.inviterPhone,
+            inviteePhone: order.phone,
+            inviteeOrderId: order.orderId,
+            status: 'settled',
+            rewardAmount: rewardAmount,
+            settledAt: new Date().toISOString(),
+            createdAt: new Date().toISOString()
+          };
+          db.inviteRelations.set(relationId, relation);
+
+          // 发放返现
+          inviter.rewardBalance += rewardAmount;
+          inviter.totalReward += rewardAmount;
+          inviter.inviteCount++;
+
+          // 记录奖励
+          const rewardId = 'RW' + Date.now();
+          db.rewards.set(rewardId, {
+            id: rewardId,
+            userPhone: inviter.phone,
+            type: 'invite',
+            amount: rewardAmount,
+            source: order.phone,
+            description: `邀请好友奖励（第${inviter.inviteCount}位）`,
+            createdAt: new Date().toISOString()
+          });
+
+          order.rewardSettled = true;
+          order.rewardAmount = rewardAmount;
+
+          console.log('[返现] 已发放:', inviter.phone, '+', rewardAmount, '分', '第', inviter.inviteCount, '位');
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[订单] 处理支付成功失败:', error);
+  }
+}
+
 // 支付宝回调
 app.post('/alipay-notify', (req, res) => {
-  console.log('[支付宝] 支付回调:', JSON.stringify(req.body, null, 2));
-  console.log('[支付宝] 支付状态:', req.body.trade_status);
+  console.log('[支付宝] 支付回调:', req.body.trade_status, req.body.out_trade_no);
 
   if (req.body.trade_status === 'TRADE_SUCCESS') {
-    console.log('[支付宝] 支付成功，处理业务逻辑');
     const order = db.orders.get(req.body.out_trade_no);
-    if (order) {
+    if (order && order.status !== 'paid') {
       order.status = 'paid';
       order.paidAt = new Date().toISOString();
       order.tradeNo = req.body.trade_no;
+      processOrderPaid(order);
     }
   }
 
   res.send('success');
 });
 
-// ==================== 邀请返现API ====================
-app.post('/api/invite/bind', (req, res) => {
-  try {
-    const { orderId } = req.body;
-    
-    const order = db.orders.get(orderId);
-    if (!order) {
-      return res.json({ success: false, error: { message: '订单不存在' } });
-    }
-
-    if (!order.inviteCode) {
-      return res.json({ success: true, data: { message: '无邀请码，跳过绑定' } });
-    }
-
-    let inviter = null;
-    for (const user of db.users.values()) {
-      if (user.inviteCode === order.inviteCode) {
-        inviter = user;
-        break;
-      }
-    }
-
-    if (!inviter) {
-      return res.json({ success: false, error: { message: '邀请人不存在' } });
-    }
-
-    for (const relation of db.inviteRelations.values()) {
-      if (relation.inviteePhone === order.phone) {
-        return res.json({ success: true, data: { message: '邀请关系已存在' } });
-      }
-    }
-
-    const relationId = 'R' + Date.now();
-    db.inviteRelations.set(relationId, {
-      id: relationId,
-      inviterId: inviter.id,
-      inviterPhone: inviter.phone,
-      inviteePhone: order.phone,
-      orderId: orderId,
-      status: 'pending_activation',
-      rewardAmount: 500,
-      createdAt: new Date().toISOString()
-    });
-
-    console.log('[邀请] 绑定成功:', relationId, inviter.phone, '->', order.phone);
-
-    res.json({ success: true, data: { message: '邀请关系已建立', relationId } });
-  } catch (error) {
-    console.error('[邀请] 绑定失败:', error);
-    res.json({ success: false, error: { message: '绑定失败' } });
-  }
-});
-
-app.post('/api/invite/activate', (req, res) => {
-  try {
-    const { phone } = req.body;
-    
-    if (!phone) {
-      return res.json({ success: false, error: { message: '手机号不能为空' } });
-    }
-
-    let activatedCount = 0;
-    for (const relation of db.inviteRelations.values()) {
-      if (relation.inviteePhone === phone && relation.status === 'pending_activation') {
-        relation.status = 'activated';
-        relation.activatedAt = new Date().toISOString();
-        
-        const inviter = db.users.get(relation.inviterPhone);
-        if (inviter) {
-          inviter.rewardBalance = (inviter.rewardBalance || 0) + relation.rewardAmount;
-          inviter.totalReward = (inviter.totalReward || 0) + relation.rewardAmount;
-          
-          const rewardId = 'RW' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-          db.rewards.set(rewardId, {
-            id: rewardId,
-            userPhone: inviter.phone,
-            type: 'invite',
-            amount: relation.rewardAmount,
-            source: relation.inviteePhone,
-            description: '邀请好友奖励',
-            createdAt: new Date().toISOString()
-          });
-          
-          console.log('[邀请] 奖励发放:', inviter.phone, '+', relation.rewardAmount, '分');
-          activatedCount++;
-        }
-      }
-    }
-
-    res.json({ success: true, data: { message: '激活奖励已记录', activatedCount } });
-  } catch (error) {
-    console.error('[邀请] 激活失败:', error);
-    res.json({ success: false, error: { message: '激活失败' } });
-  }
-});
-
+// ==================== 收益API ====================
 app.get('/api/invite/summary', (req, res) => {
   try {
     const { phone } = req.query;
-    
     if (!phone) {
       return res.json({ success: false, error: { message: '手机号不能为空' } });
     }
@@ -507,29 +612,28 @@ app.get('/api/invite/summary', (req, res) => {
       return res.json({ success: false, error: { message: '用户不存在' } });
     }
 
+    // 统计邀请人数
     let inviteCount = 0;
-    let activatedCount = 0;
+    let pendingCount = 0;
     for (const relation of db.inviteRelations.values()) {
       if (relation.inviterPhone === phone) {
         inviteCount++;
-        if (relation.status === 'activated') {
-          activatedCount++;
-        }
+        if (relation.status === 'pending') pendingCount++;
       }
     }
 
     const rewardBalance = user.rewardBalance || 0;
-    const withdrawableAmount = rewardBalance >= 1000 ? rewardBalance : 0;
 
     res.json({
       success: true,
       data: {
         inviteCode: user.inviteCode,
         inviteCount: inviteCount,
-        activatedCount: activatedCount,
+        activatedCount: inviteCount,
+        pendingCount: pendingCount,
         rewardBalance: rewardBalance,
         totalReward: user.totalReward || 0,
-        withdrawableAmount: withdrawableAmount,
+        withdrawableAmount: rewardBalance >= 1000 ? rewardBalance : 0,
         minWithdrawAmount: 1000
       }
     });
@@ -542,7 +646,6 @@ app.get('/api/invite/summary', (req, res) => {
 app.get('/api/invite/reward-ledger', (req, res) => {
   try {
     const { phone } = req.query;
-    
     if (!phone) {
       return res.json({ success: false, error: { message: '手机号不能为空' } });
     }
@@ -618,7 +721,6 @@ app.post('/api/withdraw/apply', (req, res) => {
 app.get('/api/withdraw/records', (req, res) => {
   try {
     const { phone } = req.query;
-    
     if (!phone) {
       return res.json({ success: false, error: { message: '手机号不能为空' } });
     }
@@ -650,8 +752,8 @@ app.get('/', (req, res) => {
   res.json({
     status: 'success',
     message: '布鲁计划后端API',
-    version: '2.2.0',
-    features: ['alipay', 'invite_code', 'payment', 'withdraw', 'query_order'],
+    version: '3.0.0',
+    features: ['alipay', 'invite_code', 'payment', 'withdraw', 'query_order', 'reward'],
     alipay: alipaySdk ? '已配置真实支付' : '模拟模式',
     server_time: new Date().toISOString()
   });
@@ -661,7 +763,6 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
-    alipay_app_id: ALIPAY_CONFIG.appId,
     alipay_sdk: alipaySdk ? 'initialized' : 'not_initialized'
   });
 });
@@ -669,7 +770,6 @@ app.get('/health', (req, res) => {
 // 启动服务
 app.listen(port, '0.0.0.0', () => {
   console.log(`布鲁计划后端运行在 http://0.0.0.0:${port}`);
-  console.log(`支付宝AppID: ${ALIPAY_CONFIG.appId}`);
-  console.log(`SDK状态: ${alipaySdk ? '已初始化' : '未初始化'}`);
-  console.log(`邀请码系统: 已启用`);
+  console.log(`邀请码系统: 已启用（12位安全码）`);
+  console.log(`返现规则: 3/4/5/4元递增`);
 });
