@@ -1,13 +1,13 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 
-// 导入页面组件
+// 统一使用目录结构导入页面组件
 const Welcome = () => import('./pages/welcome/welcome.vue')
-const Survey = () => import('./pages/Survey.vue')
-const ProductIntro = () => import('./pages/ProductIntro.vue')
-const Payment = () => import('./pages/Payment.vue')
-const OrderDetail = () => import('./pages/OrderDetail.vue')
-const Login = () => import('./pages/Login.vue')
-const Home = () => import('./pages/Home.vue')
+const Survey = () => import('./pages/survey/survey.vue')
+const ProductIntro = () => import('./pages/product-intro/product-intro.vue')
+const Payment = () => import('./pages/payment/payment.vue')
+const OrderDetail = () => import('./pages/order-detail/order-detail.vue')
+const Login = () => import('./pages/login/login.vue')
+const Home = () => import('./pages/home/home.vue')
 const Plan = () => import('./pages/plan/plan.vue')
 const Panic = () => import('./pages/panic/panic.vue')
 
