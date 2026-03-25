@@ -142,10 +142,10 @@ const errorMessage = ref('')
 const errorHint = ref('')
 const currentOrder = ref(null)
 
-// 价格计算
-const basePrice = 12.9
-const discount = ref(0)
-const finalPrice = computed(() => (basePrice - discount.value).toFixed(2))
+// 价格计算（单位：元，后端返回分，前端展示元）
+const basePrice = 12.9  // 原价 12.9元（展示用）
+const discount = ref(0)  // 优惠金额（元）
+const finalPrice = ref(12.9)  // 实付金额（元），默认原价，验证邀请码后更新
 
 // 按钮显示逻辑
 const canPay = computed(() => {
@@ -187,12 +187,15 @@ const validateCode = async () => {
     })
     
     if (data.success && data.data.valid) {
-      discount.value = data.data.discountAmount / 100
+      // 后端返回分，前端转为元展示
+      discount.value = (data.data.discountAmount / 100).toFixed(2)
+      finalPrice.value = (data.data.finalAmount / 100).toFixed(2)  // 使用后端计算的实付金额
       inviteCodeValid.value = true
     } else {
+      discount.value = 0
+      finalPrice.value = basePrice
       inviteCodeError.value = data.error?.message || '邀请码无效'
       inviteCodeValid.value = false
-      discount.value = 0
     }
   } catch (e) {
     inviteCodeError.value = '验证失败，请重试'
@@ -219,6 +222,7 @@ const handlePay = async () => {
       phone,
       inviteCode: inviteCodeValid.value ? inviteCode.value : null,
       productType: 'standard',
+      // 前端传元，后端会转为分存储
       amount: parseFloat(finalPrice.value)
     })
     
